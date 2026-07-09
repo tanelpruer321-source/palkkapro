@@ -1,15 +1,15 @@
 "use client";
 
-import { Calculator, RotateCcw } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Calculator, ChevronDown, Mail, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Language = "et" | "en" | "fi";
 
 type Field = {
   label: string;
   helper: string;
-  value: number;
-  setter: (value: number) => void;
+  value: string;
+  setter: (value: string) => void;
   suffix: string;
   step?: string;
 };
@@ -18,25 +18,28 @@ const EVENING_BONUS = 0.73;
 const NIGHT_BONUS = 1.36;
 
 const languageOptions: { code: Language; label: string }[] = [
-  { code: "et", label: "EE" },
-  { code: "en", label: "EN" },
   { code: "fi", label: "FI" },
+  { code: "en", label: "EN" },
+  { code: "et", label: "ET" },
 ];
 
+const LANGUAGE_STORAGE_KEY = "palkkapro-language";
+const FEEDBACK_EMAIL = "feedback@palkkapro.com";
+
 const defaults = {
-  hourlyWage: 12.59,
-  normalHours: 80,
-  eveningHours: 8,
-  nightHours: 0,
-  sundayHours: 0,
-  overtime50Hours: 0,
-  overtime100Hours: 0,
-  special50Hours: 0,
-  holiday100Hours: 0,
-  taxPercentage: 20,
-  pensionPercentage: 7.15,
-  unemploymentPercentage: 0.59,
-  otherDeductionsPercentage: 0,
+  hourlyWage: "12.59",
+  normalHours: "0",
+  eveningHours: "0",
+  nightHours: "0",
+  sundayHours: "0",
+  overtime50Hours: "0",
+  overtime100Hours: "0",
+  special50Hours: "0",
+  holiday100Hours: "0",
+  taxPercentage: "20",
+  pensionPercentage: "7.15",
+  unemploymentPercentage: "0.59",
+  otherDeductionsPercentage: "0",
 };
 
 const copy = {
@@ -44,6 +47,7 @@ const copy = {
     locale: "et-EE",
     languageLabel: "Keel",
     brand: "PalkkaPro",
+    betaLabel: "Beta",
     intro:
       "Lihtne palgakalkulaator Soomes töötavale koristusala töötajale.",
     hoursBadge: "Tunnid",
@@ -51,6 +55,10 @@ const copy = {
     formHelp: "Kõik väljad on muudetavad.",
     reset: "Taasta algväärtused",
     workSection: "Tunnid ja lisad",
+    basicSection: "Põhiandmed",
+    overtimeSection: "Ületunnid",
+    specialDaysSection: "Pühad ja eripäevad",
+    detailsSection: "Detailne jaotus",
     deductionsSection: "Mahaarvamised",
     netPay: "Hinnanguline netopalk",
     grossPay: "Brutopalk",
@@ -68,6 +76,9 @@ const copy = {
     unemployment: "Töötuskindlustus",
     otherDeductions: "Muud mahaarvamised",
     total: "Kokku",
+    feedbackText: "Tagasiside ja parandused on oodatud.",
+    feedbackButton: "Saada tagasisidet",
+    feedbackSubject: "PalkkaPro tagasiside",
     disclaimer:
       "Netopalk on hinnanguline. Lõplik summa sõltub maksukaardist, vanusest, tööandja arvestusest ja võimalikest lisamahaarvamistest.",
     fields: {
@@ -90,6 +101,7 @@ const copy = {
     locale: "en-US",
     languageLabel: "Language",
     brand: "PalkkaPro",
+    betaLabel: "Beta",
     intro:
       "A simple wage calculator for cleaning workers working in Finland.",
     hoursBadge: "Hours",
@@ -97,6 +109,10 @@ const copy = {
     formHelp: "All fields are editable.",
     reset: "Reset values",
     workSection: "Hours and bonuses",
+    basicSection: "Basic details",
+    overtimeSection: "Overtime",
+    specialDaysSection: "Holidays and special days",
+    detailsSection: "Detailed breakdown",
     deductionsSection: "Deductions",
     netPay: "Estimated net pay",
     grossPay: "Gross pay",
@@ -114,6 +130,9 @@ const copy = {
     unemployment: "Unemployment insurance",
     otherDeductions: "Other deductions",
     total: "Total",
+    feedbackText: "Feedback and corrections are welcome.",
+    feedbackButton: "Send feedback",
+    feedbackSubject: "PalkkaPro feedback",
     disclaimer:
       "Net pay is an estimate. The final amount depends on the tax card, age, employer payroll calculation and possible extra deductions.",
     fields: {
@@ -136,6 +155,7 @@ const copy = {
     locale: "fi-FI",
     languageLabel: "Kieli",
     brand: "PalkkaPro",
+    betaLabel: "Beta",
     intro:
       "Yksinkertainen palkkalaskuri Suomessa työskentelevälle siivousalan työntekijälle.",
     hoursBadge: "Tunnit",
@@ -143,6 +163,10 @@ const copy = {
     formHelp: "Kaikkia kenttiä voi muuttaa.",
     reset: "Palauta arvot",
     workSection: "Tunnit ja lisät",
+    basicSection: "Perustiedot",
+    overtimeSection: "Ylityöt",
+    specialDaysSection: "Pyhät ja erityispäivät",
+    detailsSection: "Tarkempi erittely",
     deductionsSection: "Vähennykset",
     netPay: "Arvioitu nettopalkka",
     grossPay: "Bruttopalkka",
@@ -160,6 +184,9 @@ const copy = {
     unemployment: "Työttömyysvakuutus",
     otherDeductions: "Muut vähennykset",
     total: "Yhteensä",
+    feedbackText: "Palaute ja korjaukset ovat tervetulleita.",
+    feedbackButton: "Lähetä palautetta",
+    feedbackSubject: "PalkkaPro palaute",
     disclaimer:
       "Nettopalkka on arvio. Lopullinen summa riippuu verokortista, iästä, työnantajan palkanlaskennasta ja mahdollisista lisävähennyksistä.",
     fields: {
@@ -180,13 +207,23 @@ const copy = {
   },
 } satisfies Record<Language, Record<string, unknown>>;
 
-function toNumber(value: string) {
-  return Number(value.replace(",", ".")) || 0;
+function parseInputNumber(value: string) {
+  const normalized = value.trim().replace(",", ".");
+  if (normalized === "" || normalized === "." || normalized === "-") {
+    return 0;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export default function Home() {
-  const [language, setLanguage] = useState<Language>("et");
+  const [language, setLanguage] = useState<Language>("fi");
+  const hasLoadedLanguage = useRef(false);
   const t = copy[language];
+  const feedbackHref = `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(
+    t.feedbackSubject as string,
+  )}`;
   const money = useMemo(
     () =>
       new Intl.NumberFormat(t.locale as string, {
@@ -222,16 +259,54 @@ export default function Home() {
     defaults.otherDeductionsPercentage,
   );
 
+  useEffect(() => {
+    const savedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+
+    window.setTimeout(() => {
+      if (
+        savedLanguage === "et" ||
+        savedLanguage === "fi" ||
+        savedLanguage === "en"
+      ) {
+        setLanguage(savedLanguage);
+      }
+
+      hasLoadedLanguage.current = true;
+    }, 0);
+  }, []);
+
+  useEffect(() => {
+    if (hasLoadedLanguage.current) {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    }
+  }, [language]);
+
   const totals = useMemo(() => {
-    const basePay = hourlyWage * normalHours;
-    const eveningBonusTotal = eveningHours * EVENING_BONUS;
-    const nightBonusTotal = nightHours * NIGHT_BONUS;
-    const sundayBonus = hourlyWage * sundayHours;
-    const holidayBonus100 = hourlyWage * holiday100Hours;
-    const specialBonus50 = hourlyWage * 0.5 * special50Hours;
+    const hourlyWageNumber = parseInputNumber(hourlyWage);
+    const normalHoursNumber = parseInputNumber(normalHours);
+    const eveningHoursNumber = parseInputNumber(eveningHours);
+    const nightHoursNumber = parseInputNumber(nightHours);
+    const sundayHoursNumber = parseInputNumber(sundayHours);
+    const overtime50HoursNumber = parseInputNumber(overtime50Hours);
+    const overtime100HoursNumber = parseInputNumber(overtime100Hours);
+    const special50HoursNumber = parseInputNumber(special50Hours);
+    const holiday100HoursNumber = parseInputNumber(holiday100Hours);
+    const taxPercentageNumber = parseInputNumber(taxPercentage);
+    const pensionPercentageNumber = parseInputNumber(pensionPercentage);
+    const unemploymentPercentageNumber = parseInputNumber(unemploymentPercentage);
+    const otherDeductionsPercentageNumber = parseInputNumber(
+      otherDeductionsPercentage,
+    );
+
+    const basePay = hourlyWageNumber * normalHoursNumber;
+    const eveningBonusTotal = eveningHoursNumber * EVENING_BONUS;
+    const nightBonusTotal = nightHoursNumber * NIGHT_BONUS;
+    const sundayBonus = hourlyWageNumber * sundayHoursNumber;
+    const holidayBonus100 = hourlyWageNumber * holiday100HoursNumber;
+    const specialBonus50 = hourlyWageNumber * 0.5 * special50HoursNumber;
     const overtimePay =
-      overtime50Hours * hourlyWage * 1.5 +
-      overtime100Hours * hourlyWage * 2;
+      overtime50HoursNumber * hourlyWageNumber * 1.5 +
+      overtime100HoursNumber * hourlyWageNumber * 2;
     const grossPay =
       basePay +
       eveningBonusTotal +
@@ -241,23 +316,24 @@ export default function Home() {
       specialBonus50 +
       overtimePay;
     const totalDeductionsPercent =
-      taxPercentage +
-      pensionPercentage +
-      unemploymentPercentage +
-      otherDeductionsPercentage;
-    const estimatedTaxAmount = grossPay * (taxPercentage / 100);
-    const pensionContributionAmount = grossPay * (pensionPercentage / 100);
+      taxPercentageNumber +
+      pensionPercentageNumber +
+      unemploymentPercentageNumber +
+      otherDeductionsPercentageNumber;
+    const estimatedTaxAmount = grossPay * (taxPercentageNumber / 100);
+    const pensionContributionAmount = grossPay * (pensionPercentageNumber / 100);
     const unemploymentInsuranceAmount =
-      grossPay * (unemploymentPercentage / 100);
+      grossPay * (unemploymentPercentageNumber / 100);
     const otherDeductionsAmount =
-      grossPay * (otherDeductionsPercentage / 100);
+      grossPay * (otherDeductionsPercentageNumber / 100);
     const totalDeductions =
       estimatedTaxAmount +
       pensionContributionAmount +
       unemploymentInsuranceAmount +
       otherDeductionsAmount;
     const estimatedNetPay = grossPay * (1 - totalDeductionsPercent / 100);
-    const totalHours = normalHours + overtime50Hours + overtime100Hours;
+    const totalHours =
+      normalHoursNumber + overtime50HoursNumber + overtime100HoursNumber;
 
     return {
       basePay,
@@ -295,7 +371,7 @@ export default function Home() {
 
   const fieldText = t.fields as unknown as Record<string, [string, string]>;
 
-  const workFields: Field[] = [
+  const basicFields: Field[] = [
     {
       label: fieldText.hourlyWage[0],
       helper: fieldText.hourlyWage[1],
@@ -336,6 +412,9 @@ export default function Home() {
       suffix: "h",
       step: "0.25",
     },
+  ];
+
+  const overtimeFields: Field[] = [
     {
       label: fieldText.overtime50Hours[0],
       helper: fieldText.overtime50Hours[1],
@@ -352,6 +431,9 @@ export default function Home() {
       suffix: "h",
       step: "0.25",
     },
+  ];
+
+  const specialDayFields: Field[] = [
     {
       label: fieldText.special50Hours[0],
       helper: fieldText.special50Hours[1],
@@ -368,6 +450,12 @@ export default function Home() {
       suffix: "h",
       step: "0.25",
     },
+  ];
+
+  const workFields: Field[] = [
+    ...basicFields,
+    ...overtimeFields,
+    ...specialDayFields,
   ];
 
   const deductionFields: Field[] = [
@@ -423,42 +511,44 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5 lg:gap-5 lg:px-8">
+        <header className="relative flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4 pr-20 shadow-sm md:flex-row md:items-center md:justify-between lg:p-5 lg:pr-20">
+          <label className="absolute right-3 top-3 lg:right-4 lg:top-4">
+            <span className="sr-only">{t.languageLabel as string}</span>
+            <select
+              value={language}
+              onChange={(event) => setLanguage(event.target.value as Language)}
+              className="h-8 rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-700 outline-none transition hover:border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+              aria-label={t.languageLabel as string}
+            >
+              {languageOptions.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <div className="max-w-3xl">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700">
-              {t.brand as string}
-            </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-normal text-slate-950 sm:text-4xl">
-              {t.brand as string}
-            </h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-3">
+                <span className="grid size-11 place-items-center rounded-xl bg-slate-950 text-base font-black text-white shadow-sm ring-1 ring-slate-900">
+                  P
+                </span>
+                <p className="text-2xl font-black tracking-normal text-slate-950">
+                  {t.brand as string}
+                </p>
+              </div>
+              <span className="rounded-md border border-teal-200 bg-teal-50 px-2 py-0.5 text-[11px] font-bold uppercase text-teal-700">
+                {t.betaLabel as string}
+              </span>
+            </div>
             <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
               {t.intro as string}
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-1">
-              <span className="px-2 text-xs font-semibold text-slate-500">
-                {t.languageLabel as string}
-              </span>
-              {languageOptions.map((option) => (
-                <button
-                  key={option.code}
-                  type="button"
-                  onClick={() => setLanguage(option.code)}
-                  className={`h-8 rounded-md px-3 text-sm font-bold transition ${
-                    language === option.code
-                      ? "bg-slate-950 text-white shadow-sm"
-                      : "text-slate-600 hover:bg-white"
-                  }`}
-                  aria-pressed={language === option.code}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center md:mr-8 lg:mr-10">
             <div className="flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-md bg-white text-teal-700 shadow-sm">
                 <Calculator size={20} />
@@ -471,8 +561,8 @@ export default function Home() {
           </div>
         </header>
 
-        <section className="grid gap-5 lg:grid-cols-[minmax(0,1.06fr)_minmax(360px,0.94fr)]">
-          <form className="space-y-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1.06fr)_minmax(360px,0.94fr)] lg:gap-5">
+          <form className="order-2 space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:order-1 lg:space-y-5">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-xl font-bold">{t.formTitle as string}</h2>
@@ -491,34 +581,122 @@ export default function Home() {
               </button>
             </div>
 
-            <FieldGroup title={t.workSection as string} fields={workFields} />
-            <FieldGroup
-              title={t.deductionsSection as string}
-              fields={deductionFields}
-            />
+            <div className="space-y-4 lg:hidden">
+              <FieldGroup title={t.basicSection as string} fields={basicFields} />
+              <CollapsibleFieldGroup
+                title={t.overtimeSection as string}
+                fields={overtimeFields}
+              />
+              <CollapsibleFieldGroup
+                title={t.specialDaysSection as string}
+                fields={specialDayFields}
+              />
+              <CollapsibleFieldGroup
+                title={t.deductionsSection as string}
+                fields={deductionFields}
+              />
+            </div>
+
+            <div className="hidden space-y-5 lg:block">
+              <FieldGroup title={t.workSection as string} fields={workFields} />
+              <FieldGroup
+                title={t.deductionsSection as string}
+                fields={deductionFields}
+              />
+            </div>
           </form>
 
-          <aside className="flex flex-col gap-4">
-            <section className="rounded-lg border border-slate-900 bg-slate-950 p-5 text-white shadow-sm">
-              <p className="text-sm font-medium text-slate-300">
-                {t.netPay as string}
-              </p>
-              <p className="mt-2 text-4xl font-bold">
-                {money.format(totals.estimatedNetPay)}
-              </p>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <Summary
+          <div className="order-1 lg:hidden">
+            <SalarySummary
+              netLabel={t.netPay as string}
+              netValue={money.format(totals.estimatedNetPay)}
+              grossLabel={t.grossPay as string}
+              grossValue={money.format(totals.grossPay)}
+            />
+          </div>
+
+          <div className="order-3 lg:hidden">
+            <CollapsibleResultSection title={t.detailsSection as string}>
+              <ResultBlock title={t.paySection as string}>
+                <ResultRow
+                  label={t.basePay as string}
+                  value={totals.basePay}
+                  formatter={money}
+                />
+                <ResultRow
+                  label={t.eveningBonus as string}
+                  value={totals.eveningBonusTotal}
+                  formatter={money}
+                />
+                <ResultRow
+                  label={t.nightBonus as string}
+                  value={totals.nightBonusTotal}
+                  formatter={money}
+                />
+                <ResultRow
+                  label={t.sundayBonus as string}
+                  value={totals.sundayBonus}
+                  formatter={money}
+                />
+                <ResultRow
+                  label={t.holidayBonus as string}
+                  value={totals.holidayBonus100}
+                  formatter={money}
+                />
+                <ResultRow
+                  label={t.specialBonus as string}
+                  value={totals.specialBonus50}
+                  formatter={money}
+                />
+                <ResultRow
+                  label={t.overtimePay as string}
+                  value={totals.overtimePay}
+                  formatter={money}
+                />
+                <ResultRow
                   label={t.grossPay as string}
-                  value={money.format(totals.grossPay)}
-                  dark
+                  value={totals.grossPay}
+                  formatter={money}
                 />
-                <Summary
-                  label={t.deductions as string}
-                  value={`${totals.totalDeductionsPercent.toFixed(2)} %`}
-                  dark
+              </ResultBlock>
+
+              <ResultBlock title={t.deductionsSection as string}>
+                <ResultRow
+                  label={t.tax as string}
+                  value={totals.estimatedTaxAmount}
+                  formatter={money}
                 />
-              </div>
-            </section>
+                <ResultRow
+                  label={t.pension as string}
+                  value={totals.pensionContributionAmount}
+                  formatter={money}
+                />
+                <ResultRow
+                  label={t.unemployment as string}
+                  value={totals.unemploymentInsuranceAmount}
+                  formatter={money}
+                />
+                <ResultRow
+                  label={t.otherDeductions as string}
+                  value={totals.otherDeductionsAmount}
+                  formatter={money}
+                />
+                <ResultRow
+                  label={t.total as string}
+                  value={totals.totalDeductions}
+                  formatter={money}
+                />
+              </ResultBlock>
+            </CollapsibleResultSection>
+          </div>
+
+          <aside className="hidden flex-col gap-4 lg:order-2 lg:flex">
+            <SalarySummary
+              netLabel={t.netPay as string}
+              netValue={money.format(totals.estimatedNetPay)}
+              grossLabel={t.grossPay as string}
+              grossValue={money.format(totals.grossPay)}
+            />
 
             <ResultSection title={t.paySection as string}>
               <ResultRow
@@ -560,7 +738,6 @@ export default function Home() {
                 label={t.grossPay as string}
                 value={totals.grossPay}
                 formatter={money}
-                strong
               />
             </ResultSection>
 
@@ -589,15 +766,26 @@ export default function Home() {
                 label={t.total as string}
                 value={totals.totalDeductions}
                 formatter={money}
-                strong
               />
             </ResultSection>
           </aside>
         </section>
 
-        <p className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-600 shadow-sm">
-          {t.disclaimer as string}
-        </p>
+        <footer className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-600 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p>{t.disclaimer as string}</p>
+            <p className="mt-1 text-xs font-medium text-slate-400">
+              {t.feedbackText as string}
+            </p>
+          </div>
+          <a
+            href={feedbackHref}
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-700 transition hover:border-teal-300 hover:bg-white hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-100"
+          >
+            <Mail size={14} />
+            {t.feedbackButton as string}
+          </a>
+        </footer>
       </div>
     </main>
   );
@@ -606,39 +794,127 @@ export default function Home() {
 function FieldGroup({ title, fields }: { title: string; fields: Field[] }) {
   return (
     <section>
-      <h3 className="mb-3 text-sm font-bold text-slate-700">{title}</h3>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {fields.map((field) => (
-          <label
-            key={field.label}
-            className="rounded-lg border border-slate-200 bg-white p-3 transition focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-100"
-          >
-            <span className="flex min-h-10 flex-col justify-center">
-              <span className="text-sm font-semibold text-slate-800">
-                {field.label}
-              </span>
-              <span className="text-xs leading-5 text-slate-500">
-                {field.helper}
-              </span>
-            </span>
-            <span className="mt-3 flex h-11 items-center rounded-md border border-slate-200 bg-slate-50 px-3">
-              <input
-                type="number"
-                min={0}
-                step={field.step ?? "1"}
-                value={field.value}
-                onChange={(event) => field.setter(toNumber(event.target.value))}
-                className="h-full min-w-0 flex-1 bg-transparent text-base font-semibold outline-none"
-                aria-label={field.label}
-              />
-              <span className="ml-2 shrink-0 text-sm font-medium text-slate-500">
-                {field.suffix}
-              </span>
-            </span>
-          </label>
-        ))}
+      <h3 className="mb-2 text-sm font-bold text-slate-700">{title}</h3>
+      <FieldGrid fields={fields} />
+    </section>
+  );
+}
+
+function CollapsibleFieldGroup({
+  title,
+  fields,
+}: {
+  title: string;
+  fields: Field[];
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-slate-50 p-3 lg:bg-white">
+      <button
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+        className="flex min-h-11 w-full items-center justify-between gap-3 text-left text-sm font-bold text-slate-700 lg:hidden"
+        aria-expanded={isOpen}
+      >
+        <span>{title}</span>
+        <ChevronDown
+          size={18}
+          className={`shrink-0 text-slate-400 transition ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+      <h3 className="mb-2 hidden text-sm font-bold text-slate-700 lg:block">
+        {title}
+      </h3>
+      <div className={`${isOpen ? "mt-3 block" : "hidden"} lg:block`}>
+        <FieldGrid fields={fields} />
       </div>
     </section>
+  );
+}
+
+function FieldGrid({ fields }: { fields: Field[] }) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-2 lg:gap-3">
+      {fields.map((field) => (
+        <label
+          key={field.label}
+          className="rounded-lg border border-slate-200 bg-white p-3 transition focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-100"
+        >
+          <span className="flex min-h-9 flex-col justify-center">
+            <span className="text-sm font-semibold text-slate-800">
+              {field.label}
+            </span>
+            <span className="text-xs leading-5 text-slate-500">
+              {field.helper}
+            </span>
+          </span>
+          <span className="mt-2 flex h-12 items-center rounded-md border border-slate-200 bg-slate-50 px-3">
+            <input
+              type="text"
+              inputMode="decimal"
+              min={0}
+              step={field.step ?? "1"}
+              value={field.value}
+              onChange={(event) => field.setter(event.target.value)}
+              className="h-full min-w-0 flex-1 bg-transparent text-base font-semibold outline-none"
+              aria-label={field.label}
+            />
+            <span className="ml-2 shrink-0 text-sm font-medium text-slate-500">
+              {field.suffix}
+            </span>
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function SalarySummary({
+  netLabel,
+  netValue,
+  grossLabel,
+  grossValue,
+}: {
+  netLabel: string;
+  netValue: string;
+  grossLabel: string;
+  grossValue: string;
+}) {
+  return (
+    <section className="rounded-lg border border-slate-900 bg-slate-950 p-4 text-white shadow-sm lg:p-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+        <SalaryMetric label={netLabel} value={netValue} primary />
+        <SalaryMetric label={grossLabel} value={grossValue} />
+      </div>
+    </section>
+  );
+}
+
+function SalaryMetric({
+  label,
+  value,
+  primary,
+}: {
+  label: string;
+  value: string;
+  primary?: boolean;
+}) {
+  return (
+    <div
+      className={
+        primary
+          ? "rounded-lg bg-white/10 p-3 ring-1 ring-white/10"
+          : "rounded-lg bg-slate-900 p-3 ring-1 ring-white/10"
+      }
+    >
+      <p className="text-xs font-semibold uppercase text-slate-400">{label}</p>
+      <p className={primary ? "mt-1 text-3xl font-bold" : "mt-1 text-2xl font-bold"}>
+        {value}
+      </p>
+    </div>
   );
 }
 
@@ -650,29 +926,58 @@ function ResultSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-lg font-bold">{title}</h2>
-      <div className="mt-4 divide-y divide-slate-100">{children}</div>
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <h2 className="text-sm font-bold text-slate-700">{title}</h2>
+      <div className="mt-3 divide-y divide-slate-100">{children}</div>
     </section>
   );
 }
 
-function Summary({
-  label,
-  value,
-  dark,
+function CollapsibleResultSection({
+  title,
+  children,
 }: {
-  label: string;
-  value: string;
-  dark?: boolean;
+  title: string;
+  children: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:p-5">
+      <button
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+        className="flex min-h-11 w-full items-center justify-between gap-3 text-left text-sm font-bold text-slate-700 lg:hidden"
+        aria-expanded={isOpen}
+      >
+        <span>{title}</span>
+        <ChevronDown
+          size={20}
+          className={`shrink-0 text-slate-400 transition ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+      <h2 className="hidden text-sm font-bold text-slate-700 lg:block">{title}</h2>
+      <div className={`${isOpen ? "mt-4 block" : "hidden"} lg:mt-4 lg:block`}>
+        <div className="space-y-5">{children}</div>
+      </div>
+    </section>
+  );
+}
+
+function ResultBlock({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
 }) {
   return (
-    <div>
-      <p className={dark ? "text-sm text-slate-400" : "text-sm text-slate-500"}>
-        {label}
-      </p>
-      <p className="mt-1 text-xl font-bold">{value}</p>
-    </div>
+    <section>
+      <h3 className="text-xs font-bold uppercase text-slate-500">{title}</h3>
+      <div className="mt-2 divide-y divide-slate-100">{children}</div>
+    </section>
   );
 }
 
@@ -688,19 +993,43 @@ function ResultRow({
   strong?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-3">
+    <div className="flex items-center justify-between gap-4 py-2.5">
       <p
         className={
           strong
-            ? "text-sm font-bold text-slate-950"
-            : "text-sm font-medium text-slate-600"
+            ? "text-sm font-semibold text-slate-800"
+            : "text-xs font-medium text-slate-500"
         }
       >
-        {label}
+        <BonusPercentLabel label={label} />
       </p>
-      <p className="shrink-0 text-base font-bold text-slate-950">
+      <p
+        className={
+          strong
+            ? "shrink-0 text-sm font-semibold text-slate-800"
+            : "shrink-0 text-sm font-semibold text-slate-600"
+        }
+      >
         {formatter.format(value)}
       </p>
     </div>
+  );
+}
+
+function BonusPercentLabel({ label }: { label: string }) {
+  const parts = label.split(/(\+100%|\+50%)/g);
+
+  return (
+    <>
+      {parts.map((part, index) =>
+        part === "+100%" || part === "+50%" ? (
+          <span key={`${part}-${index}`} className="font-bold text-emerald-600">
+            {part}
+          </span>
+        ) : (
+          <span key={`${part}-${index}`}>{part}</span>
+        ),
+      )}
+    </>
   );
 }
