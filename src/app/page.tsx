@@ -1,6 +1,7 @@
 "use client";
 
 import { Calculator, ChevronDown, Mail, RotateCcw } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type Language = "et" | "en" | "fi";
@@ -25,6 +26,23 @@ const languageOptions: { code: Language; label: string }[] = [
 
 const LANGUAGE_STORAGE_KEY = "palkkapro-language";
 const FEEDBACK_EMAIL = "feedback@palkkapro.com";
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "PalkkaPro",
+  applicationCategory: "FinanceApplication",
+  operatingSystem: "Any",
+  url: "https://palkkapro.com",
+  image: "https://palkkapro.com/palkkapro-mark.svg",
+  description:
+    "A multilingual wage calculator for estimating gross and net pay for cleaning and shift work in Finland.",
+  inLanguage: ["fi", "en", "et"],
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "EUR",
+  },
+};
 
 const defaults = {
   hourlyWage: "12.59",
@@ -47,7 +65,7 @@ const copy = {
     locale: "et-EE",
     languageLabel: "Keel",
     brand: "PalkkaPro",
-    betaLabel: "Beta",
+    betaLabel: "Beta V1",
     intro:
       "Lihtne palgakalkulaator Soomes töötavale koristusala töötajale.",
     hoursBadge: "Tunnid",
@@ -101,7 +119,7 @@ const copy = {
     locale: "en-US",
     languageLabel: "Language",
     brand: "PalkkaPro",
-    betaLabel: "Beta",
+    betaLabel: "Beta V1",
     intro:
       "A simple wage calculator for cleaning workers working in Finland.",
     hoursBadge: "Hours",
@@ -155,7 +173,7 @@ const copy = {
     locale: "fi-FI",
     languageLabel: "Kieli",
     brand: "PalkkaPro",
-    betaLabel: "Beta",
+    betaLabel: "Beta V1",
     intro:
       "Yksinkertainen palkkalaskuri Suomessa työskentelevälle siivousalan työntekijälle.",
     hoursBadge: "Tunnit",
@@ -511,6 +529,10 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5 lg:gap-5 lg:px-8">
         <header className="relative flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4 pr-20 shadow-sm md:flex-row md:items-center md:justify-between lg:p-5 lg:pr-20">
           <label className="absolute right-3 top-3 lg:right-4 lg:top-4">
@@ -532,9 +554,14 @@ export default function Home() {
           <div className="max-w-3xl">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-3">
-                <span className="grid size-11 place-items-center rounded-xl bg-slate-950 text-base font-black text-white shadow-sm ring-1 ring-slate-900">
-                  P
-                </span>
+                <Image
+                  src="/palkkapro-mark.svg"
+                  alt=""
+                  width={48}
+                  height={48}
+                  className="size-12 rounded-xl shadow-sm"
+                  aria-hidden="true"
+                />
                 <p className="text-2xl font-black tracking-normal text-slate-950">
                   {t.brand as string}
                 </p>
