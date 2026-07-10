@@ -38,11 +38,11 @@ The app is focused on cleaning-sector work patterns in Finland and supports comm
 
 | Calculator | Calendar |
 | --- | --- |
-| ![PalkkaPro calculator screenshot](screenshots/desktop.png) | ![PalkkaPro calendar screenshot](screenshots/calendar.png) |
+| <a href="screenshots/desktop.png"><img src="screenshots/desktop.png" alt="PalkkaPro calculator screenshot" width="420" /></a> | <a href="screenshots/calendar.png"><img src="screenshots/calendar.png" alt="PalkkaPro calendar screenshot" width="420" /></a> |
 
 | Mobile |
 | --- |
-| ![PalkkaPro mobile screenshot](screenshots/mobile.png) |
+| <a href="screenshots/mobile.png"><img src="screenshots/mobile.png" alt="PalkkaPro mobile screenshot" width="240" /></a> |
 
 ## Features
 
