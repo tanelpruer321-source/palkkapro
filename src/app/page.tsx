@@ -69,7 +69,7 @@ const structuredData = {
   url: "https://palkkapro.com",
   image: "https://palkkapro.com/palkkapro-mark.svg",
   description:
-    "A multilingual wage calculator for estimating gross and net pay for cleaning and shift work in Finland.",
+    "A multilingual wage calculator for estimating gross and net pay for cleaning workers in Finland.",
   inLanguage: ["fi", "en", "et"],
   offers: {
     "@type": "Offer",
@@ -124,7 +124,7 @@ const copy = {
     brand: "PalkkaPro",
     betaLabel: "Beta V1",
     intro:
-      "Lihtne palgakalkulaator Soomes töötavale koristusala töötajale.",
+      "Lihtne palgakalkulaator Soomes töötavale koristajale ja koristusala töötajale.",
     hoursBadge: "Tunnid",
     formTitle: "Sisesta andmed",
     formHelp: "Kõik väljad on muudetavad.",
@@ -221,7 +221,7 @@ const copy = {
     brand: "PalkkaPro",
     betaLabel: "Beta V1",
     intro:
-      "A simple wage calculator for cleaning workers working in Finland.",
+      "A simple wage calculator for cleaners and cleaning industry workers in Finland.",
     hoursBadge: "Hours",
     formTitle: "Enter details",
     formHelp: "All fields are editable.",
@@ -318,7 +318,7 @@ const copy = {
     brand: "PalkkaPro",
     betaLabel: "Beta V1",
     intro:
-      "Yksinkertainen palkkalaskuri Suomessa työskentelevälle siivousalan työntekijälle.",
+      "Yksinkertainen palkkalaskuri Suomessa työskentelevälle siivoojalle ja siivousalan työntekijälle.",
     hoursBadge: "Tunnit",
     formTitle: "Syötä tiedot",
     formHelp: "Kaikkia kenttiä voi muuttaa.",

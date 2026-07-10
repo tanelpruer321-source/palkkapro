@@ -6,9 +6,11 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
 
-**PalkkaPro** is a modern Finnish salary calculator designed especially for shift workers and the cleaning industry.
+**PalkkaPro** is a modern Finnish salary calculator designed especially for cleaners and cleaning industry workers in Finland.
 
-It helps workers estimate gross pay, net pay, and common Finnish shift-work bonuses such as evening, night, Sunday, holiday, and overtime compensation.
+It helps cleaning workers estimate gross pay, net pay, and common cleaning-industry pay additions such as evening, night, Sunday, holiday, and overtime compensation.
+
+The app is focused on cleaning-sector work patterns in Finland, while still keeping all calculations clearly marked as estimates.
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-palkkapro.com-14B8A6?style=for-the-badge)](https://palkkapro.com)
 
@@ -22,7 +24,7 @@ It helps workers estimate gross pay, net pay, and common Finnish shift-work bonu
 
 ## Features
 
-- Finnish salary calculator
+- Finnish cleaning industry salary calculator
 - Gross and net salary estimation
 - Evening bonus calculation
 - Night bonus calculation
@@ -94,7 +96,7 @@ npm run start
 - AI schedule import
 - Payslip comparison
 - User accounts
-- More Finnish collective agreements
+- Support for more Finnish collective agreement scenarios
 
 ## Contributing
 

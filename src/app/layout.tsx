@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 const siteUrl = "https://palkkapro.com";
-const title = "PalkkaPro - Finnish wage calculator";
+const title = "PalkkaPro - Finnish cleaning industry salary calculator";
 const description =
-  "Calculate estimated gross and net pay for cleaning and shift work in Finland. Supports Finnish, English and Estonian.";
+  "Estimate gross and net pay for cleaners and cleaning industry workers in Finland. Includes common evening, night, Sunday and holiday bonus calculations.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -26,11 +26,13 @@ export const metadata: Metadata = {
   },
   keywords: [
     "PalkkaPro",
-    "Finnish wage calculator",
-    "Finland salary calculator",
+    "Finnish cleaning salary calculator",
+    "Finland cleaner salary calculator",
+    "siivousalan palkkalaskuri",
+    "siivooja palkkalaskuri",
     "cleaning worker wage calculator",
-    "shift work pay calculator",
     "koristusala palgakalkulaator",
+    "koristaja palgakalkulaator",
     "palkkalaskuri",
     "net pay Finland",
     "gross pay Finland",
