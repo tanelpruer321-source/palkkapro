@@ -36,11 +36,13 @@ The app is focused on cleaning-sector work patterns in Finland and supports comm
 
 ## Screenshots
 
-> Screenshots will be added soon.
-
-| Desktop | Mobile |
+| Calculator | Calendar |
 | --- | --- |
-| `screenshots/desktop.png` | `screenshots/mobile.png` |
+| ![PalkkaPro calculator screenshot](screenshots/desktop.png) | ![PalkkaPro calendar screenshot](screenshots/calendar.png) |
+
+| Mobile |
+| --- |
+| ![PalkkaPro mobile screenshot](screenshots/mobile.png) |
 
 ## Features
 
