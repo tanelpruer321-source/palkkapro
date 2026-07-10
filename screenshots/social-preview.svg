@@ -1,0 +1,81 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="640" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="0.48" stop-color="#EFF6FF"/>
+      <stop offset="1" stop-color="#ECFDF5"/>
+    </linearGradient>
+    <linearGradient id="darkCard" x1="775" y1="70" x2="1138" y2="312" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="0.62" stop-color="#111827"/>
+      <stop offset="1" stop-color="#0F766E"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="26" stdDeviation="24" flood-color="#0F172A" flood-opacity="0.16"/>
+    </filter>
+    <filter id="logoShadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#0F172A" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <g opacity="0.45">
+    <path d="M0 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M48 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M96 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M144 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M192 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M240 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M288 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M336 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M384 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M432 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M480 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M528 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M576 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M624 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M672 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M720 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M768 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M816 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M864 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M912 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M960 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M1008 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M1056 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M1104 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M1152 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M1200 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M1248 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M1296 0V640" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/>
+    <path d="M0 0H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M0 48H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M0 96H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M0 144H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M0 192H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M0 240H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M0 288H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M0 336H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M0 384H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M0 432H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M0 480H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M0 528H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M0 576H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M0 624H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/><path d="M0 672H1280" stroke="#CBD5E1" stroke-width="1" opacity="0.35"/>
+  </g>
+  <circle cx="1115" cy="110" r="260" fill="#14B8A6" opacity="0.12"/>
+  <circle cx="1125" cy="560" r="210" fill="#2563EB" opacity="0.08"/>
+
+  <g transform="translate(72 64)" filter="url(#logoShadow)">
+    <rect width="96" height="96" rx="21" fill="#0F172A"/>
+    <path d="M24 68V25.5H42C52 25.5 59 31.5 59 40.5C59 49.7 52 55.5 42 55.5H34V68H24ZM34 47H41.3C46 47 49 44.7 49 40.5C49 36.3 46 34 41.3 34H34V47Z" fill="white"/>
+    <path d="M55 68V25.5H72C82 25.5 89 31.5 89 40.5C89 49.7 82 55.5 72 55.5H65V68H55ZM65 47H71.1C75.8 47 78.8 44.7 78.8 40.5C78.8 36.3 75.8 34 71.1 34H65V47Z" fill="#5EEAD4"/>
+    <path d="M24 77H74" stroke="#14B8A6" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(190 92)">
+    <rect width="124" height="36" rx="18" fill="#F0FDFA" stroke="#99F6E4"/>
+    <circle cx="22" cy="18" r="4" fill="#14B8A6"/>
+    <text x="36" y="23" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="800" letter-spacing="0.6" fill="#0F766E">BETA V1</text>
+  </g>
+
+  <text x="72" y="238" font-family="Inter, Arial, sans-serif" font-size="88" font-weight="900" letter-spacing="-5" fill="#0F172A">PalkkaPro</text>
+  <text x="72" y="303" font-family="Inter, Arial, sans-serif" font-size="33" font-weight="700" fill="#334155">Finnish salary calculator for</text>
+  <text x="72" y="345" font-family="Inter, Arial, sans-serif" font-size="33" font-weight="700" fill="#334155">cleaners and shift workers.</text>
+
+  <g transform="translate(72 385)">
+    <rect x="0" y="0" width="166" height="45" rx="22.5" fill="white" fill-opacity="0.78" stroke="#CBD5E1"/>
+    <text x="19" y="29" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="800" fill="#334155">Gross &amp; net pay</text>
+    <rect x="180" y="0" width="160" height="45" rx="22.5" fill="white" fill-opacity="0.78" stroke="#CBD5E1"/>
+    <text x="199" y="29" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="800" fill="#334155">Evening bonus</text>
+    <rect x="354" y="0" width="142" height="45" rx="22.5" fill="white" fill-opacity="0.78" stroke="#CBD5E1"/>
+    <text x="374" y="29" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="800" fill="#334155">Night bonus</text>
+    <rect x="510" y="0" width="156" height="45" rx="22.5" fill="white" fill-opacity="0.78" stroke="#CBD5E1"/>
+    <text x="529" y="29" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="800" fill="#334155">Sunday bonus</text>
+  </g>
+  <text x="72" y="505" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="850" fill="#0F766E">palkkapro.com</text>
+
+  <g filter="url(#softShadow)">
+    <rect x="785" y="74" width="410" height="184" rx="24" fill="url(#darkCard)"/>
+    <text x="815" y="122" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" fill="#99F6E4">Estimated net salary</text>
+    <text x="815" y="185" font-family="Inter, Arial, sans-serif" font-size="48" font-weight="900" letter-spacing="-2" fill="white">667.78 EUR</text>
+    <text x="815" y="222" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="650" fill="#CBD5E1">After estimated deductions</text>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <rect x="785" y="278" width="200" height="134" rx="22" fill="white" fill-opacity="0.92" stroke="#CBD5E1"/>
+    <text x="813" y="320" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="800" fill="#64748B">Gross salary</text>
+    <text x="813" y="367" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="900" letter-spacing="-0.4" fill="#0F172A">832.03 EUR</text>
+    <text x="813" y="393" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="650" fill="#94A3B8">Before deductions</text>
+
+    <rect x="1000" y="278" width="195" height="134" rx="22" fill="white" fill-opacity="0.92" stroke="#CBD5E1"/>
+    <text x="1028" y="320" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="800" fill="#64748B">Bonuses</text>
+    <text x="1028" y="367" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="900" letter-spacing="-0.4" fill="#0F172A">91.44 EUR</text>
+    <text x="1028" y="393" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="650" fill="#94A3B8">Evening, night &amp; Sunday</text>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <rect x="785" y="432" width="410" height="132" rx="22" fill="white" fill-opacity="0.92" stroke="#CBD5E1"/>
+    <text x="815" y="474" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" fill="#64748B">Shift calendar</text>
+    <rect x="815" y="493" width="34" height="18" rx="6" fill="#E2E8F0"/><rect x="865" y="493" width="34" height="18" rx="6" fill="#14B8A6"/><rect x="915" y="493" width="34" height="18" rx="6" fill="#E2E8F0"/><rect x="965" y="493" width="34" height="18" rx="6" fill="#99F6E4"/><rect x="1015" y="493" width="34" height="18" rx="6" fill="#E2E8F0"/><rect x="1065" y="493" width="34" height="18" rx="6" fill="#14B8A6"/><rect x="1115" y="493" width="34" height="18" rx="6" fill="#E2E8F0"/><rect x="815" y="519" width="34" height="18" rx="6" fill="#99F6E4"/><rect x="865" y="519" width="34" height="18" rx="6" fill="#E2E8F0"/><rect x="915" y="519" width="34" height="18" rx="6" fill="#14B8A6"/><rect x="965" y="519" width="34" height="18" rx="6" fill="#E2E8F0"/><rect x="1015" y="519" width="34" height="18" rx="6" fill="#E2E8F0"/><rect x="1065" y="519" width="34" height="18" rx="6" fill="#99F6E4"/><rect x="1115" y="519" width="34" height="18" rx="6" fill="#14B8A6"/><rect x="815" y="545" width="34" height="18" rx="6" fill="#E2E8F0"/><rect x="865" y="545" width="34" height="18" rx="6" fill="#E2E8F0"/><rect x="915" y="545" width="34" height="18" rx="6" fill="#E2E8F0"/><rect x="965" y="545" width="34" height="18" rx="6" fill="#14B8A6"/><rect x="1015" y="545" width="34" height="18" rx="6" fill="#E2E8F0"/><rect x="1065" y="545" width="34" height="18" rx="6" fill="#E2E8F0"/><rect x="1115" y="545" width="34" height="18" rx="6" fill="#99F6E4"/>
+  </g>
+</svg>
