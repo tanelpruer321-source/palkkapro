@@ -1,29 +1,53 @@
 # PalkkaPro
 
-PalkkaPro is a simple multilingual wage calculator for cleaning and shift workers in Finland. It helps estimate gross pay, deductions, and net pay using editable hourly wage, work-hour, bonus, overtime, and deduction fields.
+![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
 
-The calculator is intended as an easy planning tool. It does not replace an employment contract, payroll statement, tax card, or applicable collective agreement.
+**PalkkaPro** is a modern Finnish salary calculator designed especially for shift workers and the cleaning industry.
+
+It helps workers estimate gross pay, net pay, and common Finnish shift-work bonuses such as evening, night, Sunday, holiday, and overtime compensation.
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-palkkapro.com-14B8A6?style=for-the-badge)](https://palkkapro.com)
+
+## Screenshots
+
+> Screenshots will be added soon.
+
+| Desktop | Mobile |
+| --- | --- |
+| `screenshots/desktop.png` | `screenshots/mobile.png` |
 
 ## Features
 
-- Multilingual UI: Estonian, English, and Finnish
-- Editable hourly wage and work-hour inputs
-- Evening and night bonus calculations
-- Sunday, holiday, special day, and overtime bonus calculations
-- Editable deduction percentages for tax, pension, unemployment insurance, and other deductions
-- Gross pay, total deductions, and estimated net pay summary
-- Mobile-friendly SaaS-style interface
+- Finnish salary calculator
+- Gross and net salary estimation
+- Evening bonus calculation
+- Night bonus calculation
+- Sunday bonus calculation
+- Holiday bonus support
+- Multilingual interface: Finnish, English, and Estonian
+- Mobile responsive layout
+- Modern SaaS-style UI
 
-## Technologies Used
+## Tech Stack
 
-- Next.js with App Router
-- TypeScript
-- React
-- Tailwind CSS
-- Lucide React icons
-- ESLint
+- [Next.js](https://nextjs.org/)
+- [React](https://react.dev/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Vercel](https://vercel.com/)
 
-## Getting Started
+## Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/your-username/palkkapro.git
+cd palkkapro
+```
 
 Install dependencies:
 
@@ -31,27 +55,27 @@ Install dependencies:
 npm install
 ```
 
+## Development
+
 Run the local development server:
 
 ```bash
 npm run dev
 ```
 
-Open:
+Open the app in your browser:
 
 ```text
 http://localhost:3000
 ```
 
-## Production Build
-
-Check linting:
+Run linting:
 
 ```bash
 npm run lint
 ```
 
-Build the app:
+Create a production build:
 
 ```bash
 npm run build
@@ -63,10 +87,38 @@ Start the production server:
 npm run start
 ```
 
-## Version
+## Roadmap
 
-Current version: `1.0.0`
+- Schedule planner
+- Automatic shift calculations
+- AI schedule import
+- Payslip comparison
+- User accounts
+- More Finnish collective agreements
 
-## Disclaimer
+## Contributing
 
-PalkkaPro gives an estimate only. Final pay can depend on the employee's tax card, age, employer payroll calculation, employment contract, applicable collective agreement, and other possible deductions.
+Contributions, suggestions, and feedback are welcome.
+
+If you would like to contribute:
+
+1. Fork the repository
+2. Create a new branch
+3. Make your changes
+4. Open a pull request
+
+For larger ideas, please open an issue first so the direction can be discussed.
+
+## License
+
+This project is currently private/proprietary unless a license is added later.
+
+## Contact
+
+Website: [https://palkkapro.com](https://palkkapro.com)
+
+For feedback, feature requests, or collaboration ideas, please use the contact or feedback option on the live website.
+
+---
+
+**Disclaimer:** PalkkaPro provides salary estimates only. Final pay can depend on the employee's tax card, employment contract, applicable collective agreement, employer payroll rules, age, and other possible deductions.
