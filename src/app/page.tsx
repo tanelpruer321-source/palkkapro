@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Lock,
   Mail,
   Pencil,
   Plus,
@@ -13,10 +14,13 @@ import {
   Trash2,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type Language = "et" | "en" | "fi";
+type AppView = "calculator" | "planner";
 type ReportMode = "daily" | "weekly" | "monthly";
+type StorageConsent = "checking" | "pending" | "accepted" | "declined";
 
 type Field = {
   label: string;
@@ -58,7 +62,14 @@ const languageOptions: { code: Language; label: string }[] = [
 ];
 
 const LANGUAGE_STORAGE_KEY = "palkkapro-language";
+const CALCULATOR_STORAGE_KEY = "palkkapro-calculator-values";
+const STORAGE_NOTICE_KEY = "palkkapro-storage-consent";
 const SHIFTS_STORAGE_KEY = "palkkapro-work-shifts";
+const USER_DATA_STORAGE_KEYS = [
+  LANGUAGE_STORAGE_KEY,
+  CALCULATOR_STORAGE_KEY,
+  SHIFTS_STORAGE_KEY,
+];
 const FEEDBACK_EMAIL = "feedback@palkkapro.com";
 const structuredData = {
   "@context": "https://schema.org",
@@ -90,12 +101,31 @@ const defaults = {
   holiday100Hours: "0",
   taxPercentage: "20",
   pensionPercentage: "7.15",
-  unemploymentPercentage: "0.59",
+  unemploymentPercentage: "0.89",
   otherDeductionsPercentage: "0",
 };
 
+type CalculatorValues = typeof defaults;
+type SavedCalculatorSettings = Pick<
+  CalculatorValues,
+  | "hourlyWage"
+  | "taxPercentage"
+  | "pensionPercentage"
+  | "unemploymentPercentage"
+  | "otherDeductionsPercentage"
+>;
+
 function getCurrentMonth() {
   return new Date().toISOString().slice(0, 7);
+}
+
+function addMonths(monthKey: string, change: number) {
+  const [year, month] = monthKey.split("-").map(Number);
+  const nextDate = new Date(year, month - 1 + change, 1);
+
+  return `${nextDate.getFullYear()}-${(nextDate.getMonth() + 1)
+    .toString()
+    .padStart(2, "0")}`;
 }
 
 function createEmptyShift(date = new Date().toISOString().slice(0, 10)): WorkShift {
@@ -128,8 +158,11 @@ const copy = {
     hoursBadge: "Tunnid",
     formTitle: "Sisesta andmed",
     formHelp: "Kõik väljad on muudetavad.",
+    calculatorTab: "Kalkulaator",
+    plannerTab: "Tööplanner",
     reset: "Taasta algväärtused",
     workSection: "Tunnid ja lisad",
+    paySettingsSection: "Palgaseaded",
     basicSection: "Põhiandmed",
     overtimeSection: "Ületunnid",
     specialDaysSection: "Pühad ja eripäevad",
@@ -154,6 +187,12 @@ const copy = {
     feedbackText: "Tagasiside ja parandused on oodatud.",
     feedbackButton: "Saada tagasisidet",
     feedbackSubject: "PalkkaPro tagasiside",
+    privacyLink: "Privaatsus",
+    storageNoticeTitle: "Privaatsusseaded",
+    storageNoticeText:
+      "PalkkaPro saab kasutada brauseri salvestust, et mäletada sinu keelt, palgaseadeid ja kalendrisse lisatud tööpäevi. Kui keeldud, töötab kalkulaator edasi, aga andmeid ei salvestata.",
+    storageNoticeAccept: "Nõustun",
+    storageNoticeDecline: "Keeldun",
     premiumPreview: "Premium eelvaade",
     shiftPlannerTitle: "Tööpäevade planeerija",
     shiftPlannerIntro:
@@ -193,6 +232,9 @@ const copy = {
     showAll: "Näita kõiki",
     noWorkdays: "Selles kuus pole veel tööpäevi.",
     shiftSummary: "Kuu kokkuvõte",
+    earningsTrend: "Teenistuse trend",
+    lastSixMonths: "Viimased 6 kuud",
+    averageMonth: "Keskmine kuu",
     workdays: "Tööpäevad",
     remove: "Kustuta",
     note: "Märkus",
@@ -225,8 +267,11 @@ const copy = {
     hoursBadge: "Hours",
     formTitle: "Enter details",
     formHelp: "All fields are editable.",
+    calculatorTab: "Calculator",
+    plannerTab: "Work Planner",
     reset: "Reset values",
     workSection: "Hours and bonuses",
+    paySettingsSection: "Pay settings",
     basicSection: "Basic details",
     overtimeSection: "Overtime",
     specialDaysSection: "Holidays and special days",
@@ -251,6 +296,12 @@ const copy = {
     feedbackText: "Feedback and corrections are welcome.",
     feedbackButton: "Send feedback",
     feedbackSubject: "PalkkaPro feedback",
+    privacyLink: "Privacy",
+    storageNoticeTitle: "Privacy preferences",
+    storageNoticeText:
+      "PalkkaPro can use browser storage to remember your language, wage settings and saved calendar workdays. If you decline, the calculator still works, but your data is not saved.",
+    storageNoticeAccept: "Accept",
+    storageNoticeDecline: "Decline",
     premiumPreview: "Premium preview",
     shiftPlannerTitle: "Workday planner",
     shiftPlannerIntro:
@@ -290,6 +341,9 @@ const copy = {
     showAll: "Show all",
     noWorkdays: "No workdays added for this month yet.",
     shiftSummary: "Monthly summary",
+    earningsTrend: "Earnings trend",
+    lastSixMonths: "Last 6 months",
+    averageMonth: "Average month",
     workdays: "Workdays",
     remove: "Remove",
     note: "Note",
@@ -322,8 +376,11 @@ const copy = {
     hoursBadge: "Tunnit",
     formTitle: "Syötä tiedot",
     formHelp: "Kaikkia kenttiä voi muuttaa.",
+    calculatorTab: "Laskuri",
+    plannerTab: "Työsuunnittelu",
     reset: "Palauta arvot",
     workSection: "Tunnit ja lisät",
+    paySettingsSection: "Palkka-asetukset",
     basicSection: "Perustiedot",
     overtimeSection: "Ylityöt",
     specialDaysSection: "Pyhät ja erityispäivät",
@@ -348,6 +405,12 @@ const copy = {
     feedbackText: "Palaute ja korjaukset ovat tervetulleita.",
     feedbackButton: "Lähetä palautetta",
     feedbackSubject: "PalkkaPro palaute",
+    privacyLink: "Tietosuoja",
+    storageNoticeTitle: "Tietosuoja-asetukset",
+    storageNoticeText:
+      "PalkkaPro voi käyttää selaimen tallennustilaa muistaakseen kielen, palkka-asetukset ja kalenteriin tallennetut työpäivät. Jos kieltäydyt, laskuri toimii edelleen, mutta tietoja ei tallenneta.",
+    storageNoticeAccept: "Hyväksyn",
+    storageNoticeDecline: "Kieltäydyn",
     premiumPreview: "Premium-esikatselu",
     shiftPlannerTitle: "Työpäivien suunnittelija",
     shiftPlannerIntro:
@@ -387,6 +450,9 @@ const copy = {
     showAll: "Näytä kaikki",
     noWorkdays: "Tälle kuukaudelle ei ole vielä lisätty työpäiviä.",
     shiftSummary: "Kuukauden yhteenveto",
+    earningsTrend: "Ansioiden kehitys",
+    lastSixMonths: "Viimeiset 6 kuukautta",
+    averageMonth: "Keskimääräinen kuukausi",
     workdays: "Työpäivät",
     remove: "Poista",
     note: "Muistiinpano",
@@ -513,6 +579,74 @@ function getShiftCalculatedHours(shift: WorkShift) {
   };
 }
 
+function calculateShiftPay(
+  shifts: WorkShift[],
+  hourlyWage: number,
+  totalDeductionsPercent: number,
+) {
+  const hours = shifts.reduce(
+    (sum, shift) => {
+      const shiftHours = getShiftCalculatedHours(shift);
+
+      return {
+        normalHours: sum.normalHours + shiftHours.normalHours,
+        eveningHours: sum.eveningHours + shiftHours.eveningHours,
+        nightHours: sum.nightHours + shiftHours.nightHours,
+        sundayHours: sum.sundayHours + shiftHours.sundayHours,
+        overtime50Hours: sum.overtime50Hours + shiftHours.overtime50Hours,
+        overtime100Hours: sum.overtime100Hours + shiftHours.overtime100Hours,
+        special50Hours: sum.special50Hours + shiftHours.special50Hours,
+        holiday100Hours: sum.holiday100Hours + shiftHours.holiday100Hours,
+      };
+    },
+    {
+      normalHours: 0,
+      eveningHours: 0,
+      nightHours: 0,
+      sundayHours: 0,
+      overtime50Hours: 0,
+      overtime100Hours: 0,
+      special50Hours: 0,
+      holiday100Hours: 0,
+    },
+  );
+
+  const basePay = hourlyWage * hours.normalHours;
+  const eveningBonusTotal = hours.eveningHours * EVENING_BONUS;
+  const nightBonusTotal = hours.nightHours * NIGHT_BONUS;
+  const sundayBonus = hourlyWage * hours.sundayHours;
+  const holidayBonus100 = hourlyWage * hours.holiday100Hours;
+  const specialBonus50 = hourlyWage * 0.5 * hours.special50Hours;
+  const overtimePay =
+    hours.overtime50Hours * hourlyWage * 1.5 +
+    hours.overtime100Hours * hourlyWage * 2;
+  const grossPay =
+    basePay +
+    eveningBonusTotal +
+    nightBonusTotal +
+    sundayBonus +
+    holidayBonus100 +
+    specialBonus50 +
+    overtimePay;
+  const estimatedNetPay = grossPay * (1 - totalDeductionsPercent / 100);
+  const totalHours =
+    hours.normalHours + hours.overtime50Hours + hours.overtime100Hours;
+
+  return {
+    ...hours,
+    basePay,
+    eveningBonusTotal,
+    estimatedNetPay,
+    grossPay,
+    holidayBonus100,
+    nightBonusTotal,
+    overtimePay,
+    specialBonus50,
+    sundayBonus,
+    totalHours,
+  };
+}
+
 function getCalendarDays(month: string) {
   const [year, monthIndex] = month.split("-").map(Number);
   const firstDay = new Date(year, monthIndex - 1, 1);
@@ -550,7 +684,6 @@ function getWeekRangeLabel(dateKey: string) {
 
 export default function Home() {
   const [language, setLanguage] = useState<Language>("fi");
-  const hasLoadedLanguage = useRef(false);
   const t = copy[language];
   const feedbackHref = `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(
     t.feedbackSubject as string,
@@ -596,13 +729,19 @@ export default function Home() {
   const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isAllShiftsModalOpen, setIsAllShiftsModalOpen] = useState(false);
+  const [storageConsent, setStorageConsent] =
+    useState<StorageConsent>("checking");
+  const [activeView, setActiveView] = useState<AppView>("calculator");
   const [reportMode, setReportMode] = useState<ReportMode>("daily");
+  const hasLoadedCalculatorValues = useRef(false);
   const hasLoadedShifts = useRef(false);
 
   useEffect(() => {
-    const savedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    const savedConsent = window.localStorage.getItem(STORAGE_NOTICE_KEY);
 
-    window.setTimeout(() => {
+    if (savedConsent === "accepted" || savedConsent === "true") {
+      const savedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+
       if (
         savedLanguage === "et" ||
         savedLanguage === "fi" ||
@@ -611,17 +750,91 @@ export default function Home() {
         setLanguage(savedLanguage);
       }
 
-      hasLoadedLanguage.current = true;
-    }, 0);
+      setStorageConsent("accepted");
+    } else if (savedConsent === "declined") {
+      setStorageConsent("declined");
+    } else {
+      setStorageConsent("pending");
+    }
   }, []);
 
   useEffect(() => {
-    if (hasLoadedLanguage.current) {
+    if (storageConsent === "accepted") {
       window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
     }
-  }, [language]);
+  }, [language, storageConsent]);
 
   useEffect(() => {
+    if (storageConsent !== "accepted") {
+      return;
+    }
+
+    const savedValues = window.localStorage.getItem(CALCULATOR_STORAGE_KEY);
+
+    window.setTimeout(() => {
+      if (savedValues) {
+        try {
+          const parsed = JSON.parse(savedValues) as Partial<SavedCalculatorSettings>;
+
+          if (typeof parsed.hourlyWage === "string") {
+            setHourlyWage(parsed.hourlyWage);
+          }
+
+          if (typeof parsed.taxPercentage === "string") {
+            setTaxPercentage(parsed.taxPercentage);
+          }
+
+          if (typeof parsed.pensionPercentage === "string") {
+            setPensionPercentage(parsed.pensionPercentage);
+          }
+
+          if (typeof parsed.unemploymentPercentage === "string") {
+            setUnemploymentPercentage(parsed.unemploymentPercentage);
+          }
+
+          if (typeof parsed.otherDeductionsPercentage === "string") {
+            setOtherDeductionsPercentage(parsed.otherDeductionsPercentage);
+          }
+        } catch {
+          window.localStorage.removeItem(CALCULATOR_STORAGE_KEY);
+        }
+      }
+
+      hasLoadedCalculatorValues.current = true;
+    }, 0);
+  }, [storageConsent]);
+
+  useEffect(() => {
+    if (
+      storageConsent !== "accepted" ||
+      !hasLoadedCalculatorValues.current
+    ) {
+      return;
+    }
+
+    const values: SavedCalculatorSettings = {
+      hourlyWage,
+      taxPercentage,
+      pensionPercentage,
+      unemploymentPercentage,
+      otherDeductionsPercentage,
+    };
+
+    window.localStorage.setItem(CALCULATOR_STORAGE_KEY, JSON.stringify(values));
+  }, [
+    hourlyWage,
+    otherDeductionsPercentage,
+    pensionPercentage,
+    storageConsent,
+    taxPercentage,
+    unemploymentPercentage,
+  ]);
+
+  useEffect(() => {
+    if (storageConsent !== "accepted") {
+      return;
+    }
+
     const savedShifts = window.localStorage.getItem(SHIFTS_STORAGE_KEY);
 
     window.setTimeout(() => {
@@ -639,16 +852,16 @@ export default function Home() {
 
       hasLoadedShifts.current = true;
     }, 0);
-  }, []);
+  }, [storageConsent]);
 
   useEffect(() => {
-    if (hasLoadedShifts.current) {
+    if (storageConsent === "accepted" && hasLoadedShifts.current) {
       window.localStorage.setItem(
         SHIFTS_STORAGE_KEY,
         JSON.stringify(workShifts),
       );
     }
-  }, [workShifts]);
+  }, [storageConsent, workShifts]);
 
   const totals = useMemo(() => {
     const hourlyWageNumber = parseInputNumber(hourlyWage);
@@ -854,6 +1067,53 @@ export default function Home() {
     () => [...filteredShifts].reverse().slice(0, 5),
     [filteredShifts],
   );
+
+  const earningsTrend = useMemo(() => {
+    const hourlyWageNumber = parseInputNumber(hourlyWage);
+    const totalDeductionsPercent =
+      parseInputNumber(taxPercentage) +
+      parseInputNumber(pensionPercentage) +
+      parseInputNumber(unemploymentPercentage) +
+      parseInputNumber(otherDeductionsPercentage);
+    const months = Array.from({ length: 6 }, (_, index) =>
+      addMonths(selectedMonth, index - 5),
+    );
+
+    const rows = months.map((month) => {
+      const shifts = workShifts.filter((shift) => shift.date.startsWith(month));
+      const pay = calculateShiftPay(
+        shifts,
+        hourlyWageNumber,
+        totalDeductionsPercent,
+      );
+
+      return {
+        month,
+        ...pay,
+      };
+    });
+    const maxGrossPay = Math.max(...rows.map((row) => row.grossPay), 1);
+    const totalGrossPay = rows.reduce((sum, row) => sum + row.grossPay, 0);
+    const totalNetPay = rows.reduce((sum, row) => sum + row.estimatedNetPay, 0);
+    const totalHours = rows.reduce((sum, row) => sum + row.totalHours, 0);
+
+    return {
+      averageGrossPay: totalGrossPay / rows.length,
+      maxGrossPay,
+      rows,
+      totalGrossPay,
+      totalHours,
+      totalNetPay,
+    };
+  }, [
+    hourlyWage,
+    otherDeductionsPercentage,
+    pensionPercentage,
+    selectedMonth,
+    taxPercentage,
+    unemploymentPercentage,
+    workShifts,
+  ]);
 
   const reportRows = useMemo(() => {
     const hourlyWageNumber = parseInputNumber(hourlyWage);
@@ -1066,6 +1326,18 @@ export default function Home() {
     },
   ];
 
+  const plannerPayFields: Field[] = [
+    {
+      label: fieldText.hourlyWage[0],
+      helper: fieldText.hourlyWage[1],
+      value: hourlyWage,
+      setter: setHourlyWage,
+      suffix: "€/h",
+      step: "0.01",
+    },
+    ...deductionFields,
+  ];
+
   function resetValues() {
     setHourlyWage(defaults.hourlyWage);
     setNormalHours(defaults.normalHours);
@@ -1145,6 +1417,40 @@ export default function Home() {
     setWorkShifts((current) => current.filter((shift) => shift.id !== id));
   }
 
+  function changeLanguage(nextLanguage: Language) {
+    setLanguage(nextLanguage);
+
+    if (storageConsent === "accepted") {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLanguage);
+    }
+  }
+
+  function acceptStorage() {
+    const values: SavedCalculatorSettings = {
+      hourlyWage,
+      taxPercentage,
+      pensionPercentage,
+      unemploymentPercentage,
+      otherDeductionsPercentage,
+    };
+
+    window.localStorage.setItem(STORAGE_NOTICE_KEY, "accepted");
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    window.localStorage.setItem(CALCULATOR_STORAGE_KEY, JSON.stringify(values));
+    window.localStorage.setItem(SHIFTS_STORAGE_KEY, JSON.stringify(workShifts));
+    hasLoadedCalculatorValues.current = true;
+    hasLoadedShifts.current = true;
+    setStorageConsent("accepted");
+  }
+
+  function declineStorage() {
+    USER_DATA_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
+    window.localStorage.setItem(STORAGE_NOTICE_KEY, "declined");
+    hasLoadedCalculatorValues.current = false;
+    hasLoadedShifts.current = false;
+    setStorageConsent("declined");
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <script
@@ -1157,7 +1463,7 @@ export default function Home() {
             <span className="sr-only">{t.languageLabel as string}</span>
             <select
               value={language}
-              onChange={(event) => setLanguage(event.target.value as Language)}
+              onChange={(event) => changeLanguage(event.target.value as Language)}
               className="h-8 rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-700 outline-none transition hover:border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
               aria-label={t.languageLabel as string}
             >
@@ -1200,12 +1506,48 @@ export default function Home() {
               </span>
               <div>
                 <p className="text-sm text-slate-500">{t.hoursBadge as string}</p>
-                <p className="text-2xl font-bold">{totals.totalHours} h</p>
+                <p className="text-2xl font-bold">
+                  {activeView === "planner"
+                    ? shiftTotals.totalHours
+                    : totals.totalHours}{" "}
+                  h
+                </p>
               </div>
             </div>
           </div>
         </header>
 
+        <nav
+          className="inline-flex w-full rounded-lg border border-slate-200 bg-white p-1 shadow-sm sm:w-fit"
+          aria-label="PalkkaPro tools"
+        >
+          {(["calculator", "planner"] as AppView[]).map((view) => (
+            <button
+              key={view}
+              type="button"
+              onClick={() => setActiveView(view)}
+              className={`group relative h-10 min-w-0 flex-1 rounded-md px-2 text-[13px] font-bold transition sm:flex-none sm:px-4 sm:text-sm ${
+                activeView === view
+                  ? "bg-slate-950 text-white shadow-sm"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              {view === "calculator" ? (
+                <span className="inline-flex items-center justify-center gap-1.5">
+                  <Calculator size={14} aria-hidden="true" />
+                  <span>{t.calculatorTab as string}</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center justify-center gap-1.5">
+                  <Lock size={13} aria-hidden="true" />
+                  <span>{t.plannerTab as string}</span>
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+
+        {activeView === "calculator" ? (
         <section className="grid gap-4 lg:grid-cols-[minmax(0,1.06fr)_minmax(360px,0.94fr)] lg:gap-5">
           <form className="order-2 space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:order-1 lg:space-y-5">
             <div className="flex items-start justify-between gap-3">
@@ -1415,7 +1757,9 @@ export default function Home() {
             </ResultSection>
           </aside>
         </section>
+        ) : null}
 
+        {activeView === "planner" ? (
         <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-2xl">
@@ -1443,6 +1787,13 @@ export default function Home() {
                 className="mt-2 h-11 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm font-semibold outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
               />
             </label>
+          </div>
+
+          <div className="mt-4">
+            <CollapsibleFieldGroup
+              title={t.paySettingsSection as string}
+              fields={plannerPayFields}
+            />
           </div>
 
           <div className="mt-4 grid gap-4 sm:mt-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.72fr)] xl:gap-5">
@@ -1562,6 +1913,69 @@ export default function Home() {
               </section>
 
               <section className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-700">
+                      {t.earningsTrend as string}
+                    </h3>
+                    <p className="mt-0.5 text-xs font-medium text-slate-400">
+                      {t.lastSixMonths as string}
+                    </p>
+                  </div>
+                  <span className="rounded-md border border-teal-200 bg-teal-50 px-2 py-0.5 text-[10px] font-bold uppercase text-teal-700">
+                    {t.premiumPreview as string}
+                  </span>
+                </div>
+
+                <div className="mt-4 flex h-36 items-end gap-2 border-b border-slate-100 pb-2">
+                  {earningsTrend.rows.map((row) => {
+                    const barHeight = Math.max(
+                      6,
+                      Math.round((row.grossPay / earningsTrend.maxGrossPay) * 100),
+                    );
+
+                    return (
+                      <div
+                        key={row.month}
+                        className="flex min-w-0 flex-1 flex-col items-center gap-2"
+                      >
+                        <div className="flex h-24 w-full items-end">
+                          <div
+                            className="w-full rounded-t bg-teal-500 transition"
+                            style={{ height: `${barHeight}%` }}
+                            aria-label={`${row.month}: ${money.format(
+                              row.grossPay,
+                            )}`}
+                          />
+                        </div>
+                        <span className="truncate text-[10px] font-bold text-slate-400">
+                          {row.month.slice(5)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <MiniStat
+                    label={t.grossPay as string}
+                    value={money.format(earningsTrend.totalGrossPay)}
+                  />
+                  <MiniStat
+                    label={t.netPay as string}
+                    value={money.format(earningsTrend.totalNetPay)}
+                  />
+                  <MiniStat
+                    label={t.averageMonth as string}
+                    value={money.format(earningsTrend.averageGrossPay)}
+                  />
+                </div>
+                <p className="mt-2 text-xs font-medium text-slate-400">
+                  {earningsTrend.totalHours} h
+                </p>
+              </section>
+
+              <section className="rounded-lg border border-slate-200 bg-white p-4">
                 <h3 className="text-sm font-bold text-slate-700">
                   {t.recentWorkdays as string}
                 </h3>
@@ -1596,6 +2010,7 @@ export default function Home() {
             </div>
           </div>
         </section>
+        ) : null}
 
         {isShiftModalOpen ? (
           <div className="fixed inset-0 z-50 flex items-end bg-slate-950/50 p-3 sm:items-center sm:justify-center">
@@ -1711,13 +2126,20 @@ export default function Home() {
                   }
                   suffix="h"
                 />
-                <div className="sm:col-span-2">
-                  <PlannerInput
-                    label={t.note as string}
-                    value={shiftDraft.note}
-                    onChange={(value) => updateShiftDraft("note", value)}
-                    type="text"
-                  />
+                <div>
+                  <label className="block rounded-lg border border-slate-200 bg-white p-3 transition focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-100">
+                    <span className="text-xs font-bold text-slate-600">
+                      {t.note as string}
+                    </span>
+                    <textarea
+                      value={shiftDraft.note}
+                      onChange={(event) =>
+                        updateShiftDraft("note", event.target.value)
+                      }
+                      rows={2}
+                      className="mt-2 min-h-20 w-full resize-none rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold outline-none"
+                    />
+                  </label>
                 </div>
               </div>
 
@@ -1915,15 +2337,53 @@ export default function Home() {
               {t.feedbackText as string}
             </p>
           </div>
-          <a
-            href={feedbackHref}
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-700 transition hover:border-teal-300 hover:bg-white hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-100"
-          >
-            <Mail size={14} />
-            {t.feedbackButton as string}
-          </a>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Link
+              href="/privacy"
+              className="inline-flex h-9 items-center justify-center rounded-md px-3 text-xs font-bold text-slate-500 transition hover:bg-slate-50 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-100"
+            >
+              {t.privacyLink as string}
+            </Link>
+            <a
+              href={feedbackHref}
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-700 transition hover:border-teal-300 hover:bg-white hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-100"
+            >
+              <Mail size={14} />
+              {t.feedbackButton as string}
+            </a>
+          </div>
         </footer>
       </div>
+
+      {storageConsent === "pending" ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-3 sm:px-5 sm:pb-5">
+          <section className="pointer-events-auto mx-auto flex max-w-3xl flex-col gap-3 overflow-hidden rounded-lg border border-slate-300 bg-white text-sm text-slate-600 shadow-2xl shadow-slate-950/25 ring-1 ring-slate-950/5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="h-1 bg-teal-500 sm:h-auto sm:w-1 self-stretch" />
+            <div className="px-4 pb-1 pt-3 sm:flex-1 sm:px-0 sm:py-4">
+              <h2 className="text-sm font-black uppercase tracking-normal text-slate-950">
+                {t.storageNoticeTitle as string}
+              </h2>
+              <p className="mt-1 leading-6">{t.storageNoticeText as string}</p>
+            </div>
+            <div className="flex shrink-0 flex-col gap-2 px-4 pb-4 sm:flex-row sm:pr-4 sm:pt-4">
+              <button
+                type="button"
+                onClick={declineStorage}
+                className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-100"
+              >
+                {t.storageNoticeDecline as string}
+              </button>
+              <button
+                type="button"
+                onClick={acceptStorage}
+                className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-200"
+              >
+                {t.storageNoticeAccept as string}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
