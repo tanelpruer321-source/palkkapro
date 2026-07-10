@@ -1,10 +1,22 @@
 "use client";
 
-import { Calculator, ChevronDown, Mail, RotateCcw } from "lucide-react";
+import {
+  BarChart3,
+  Calculator,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Mail,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type Language = "et" | "en" | "fi";
+type ReportMode = "daily" | "weekly" | "monthly";
 
 type Field = {
   label: string;
@@ -15,8 +27,29 @@ type Field = {
   step?: string;
 };
 
+type WorkShift = {
+  id: string;
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  breakMinutes?: string;
+  normalHours: string;
+  eveningHours: string;
+  nightHours: string;
+  sundayHours: string;
+  overtime50Hours: string;
+  overtime100Hours: string;
+  special50Hours: string;
+  holiday100Hours: string;
+  note: string;
+};
+
 const EVENING_BONUS = 0.73;
 const NIGHT_BONUS = 1.36;
+const DAY_MINUTES = 24 * 60;
+const EVENING_START_MINUTES = 18 * 60;
+const NIGHT_START_MINUTES = 23 * 60;
+const NIGHT_END_MINUTES = 6 * 60;
 
 const languageOptions: { code: Language; label: string }[] = [
   { code: "fi", label: "FI" },
@@ -25,6 +58,7 @@ const languageOptions: { code: Language; label: string }[] = [
 ];
 
 const LANGUAGE_STORAGE_KEY = "palkkapro-language";
+const SHIFTS_STORAGE_KEY = "palkkapro-work-shifts";
 const FEEDBACK_EMAIL = "feedback@palkkapro.com";
 const structuredData = {
   "@context": "https://schema.org",
@@ -59,6 +93,29 @@ const defaults = {
   unemploymentPercentage: "0.59",
   otherDeductionsPercentage: "0",
 };
+
+function getCurrentMonth() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function createEmptyShift(date = new Date().toISOString().slice(0, 10)): WorkShift {
+  return {
+    id: "",
+    date,
+    startTime: "09:00",
+    endTime: "17:00",
+    breakMinutes: "0",
+    normalHours: "0",
+    eveningHours: "0",
+    nightHours: "0",
+    sundayHours: "0",
+    overtime50Hours: "0",
+    overtime100Hours: "0",
+    special50Hours: "0",
+    holiday100Hours: "0",
+    note: "",
+  };
+}
 
 const copy = {
   et: {
@@ -97,6 +154,49 @@ const copy = {
     feedbackText: "Tagasiside ja parandused on oodatud.",
     feedbackButton: "Saada tagasisidet",
     feedbackSubject: "PalkkaPro tagasiside",
+    premiumPreview: "Premium eelvaade",
+    shiftPlannerTitle: "Tööpäevade planeerija",
+    shiftPlannerIntro:
+      "Vali kalendrist päev, sisesta tööaeg ja vaata kuu hinnangut.",
+    selectedMonth: "Valitud kuu",
+    addWorkday: "Lisa tööpäev",
+    calendarTitle: "Kalender",
+    clickDayToAdd: "Vali päev ja lisa tööaeg.",
+    previousMonth: "Eelmine kuu",
+    nextMonth: "Järgmine kuu",
+    editWorkday: "Lisa tööpäev",
+    edit: "Muuda",
+    startTime: "Algus",
+    endTime: "Lõpp",
+    breakMinutes: "Paus",
+    saveWorkday: "Salvesta tööpäev",
+    close: "Sulge",
+    autoCalculated: "Automaatselt arvutatud",
+    totalWorked: "Töötunnid",
+    eveningShort: "Õhtu",
+    nightShort: "Öö",
+    sundayShort: "Pühapäev",
+    reportButton: "Vaata raportit",
+    reportTitle: "Tasu raport",
+    dailyReport: "Päevad",
+    weeklyReport: "Nädalad",
+    monthlyReport: "Kuu",
+    bonusSummary: "Lisatasude kokkuvõte",
+    noReportRows: "Raporti jaoks pole veel tööpäevi.",
+    period: "Periood",
+    hours: "Tunnid",
+    amount: "Summa",
+    weekdays: ["E", "T", "K", "N", "R", "L", "P"],
+    savedWorkdays: "Salvestatud tööpäevad",
+    recentWorkdays: "Viimased tööpäevad",
+    allWorkdays: "Kõik tööpäevad",
+    showAll: "Näita kõiki",
+    noWorkdays: "Selles kuus pole veel tööpäevi.",
+    shiftSummary: "Kuu kokkuvõte",
+    workdays: "Tööpäevad",
+    remove: "Kustuta",
+    note: "Märkus",
+    date: "Kuupäev",
     disclaimer:
       "Netopalk on hinnanguline. Lõplik summa sõltub maksukaardist, vanusest, tööandja arvestusest ja võimalikest lisamahaarvamistest.",
     fields: {
@@ -151,6 +251,49 @@ const copy = {
     feedbackText: "Feedback and corrections are welcome.",
     feedbackButton: "Send feedback",
     feedbackSubject: "PalkkaPro feedback",
+    premiumPreview: "Premium preview",
+    shiftPlannerTitle: "Workday planner",
+    shiftPlannerIntro:
+      "Pick a day, enter work times and see the monthly estimate.",
+    selectedMonth: "Selected month",
+    addWorkday: "Add workday",
+    calendarTitle: "Calendar",
+    clickDayToAdd: "Choose a day and add work time.",
+    previousMonth: "Previous month",
+    nextMonth: "Next month",
+    editWorkday: "Add workday",
+    edit: "Edit",
+    startTime: "Start",
+    endTime: "End",
+    breakMinutes: "Break",
+    saveWorkday: "Save workday",
+    close: "Close",
+    autoCalculated: "Automatically calculated",
+    totalWorked: "Worked hours",
+    eveningShort: "Evening",
+    nightShort: "Night",
+    sundayShort: "Sunday",
+    reportButton: "View report",
+    reportTitle: "Pay report",
+    dailyReport: "Days",
+    weeklyReport: "Weeks",
+    monthlyReport: "Month",
+    bonusSummary: "Bonus summary",
+    noReportRows: "Add workdays to see a report.",
+    period: "Period",
+    hours: "Hours",
+    amount: "Amount",
+    weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    savedWorkdays: "Saved workdays",
+    recentWorkdays: "Recent workdays",
+    allWorkdays: "All workdays",
+    showAll: "Show all",
+    noWorkdays: "No workdays added for this month yet.",
+    shiftSummary: "Monthly summary",
+    workdays: "Workdays",
+    remove: "Remove",
+    note: "Note",
+    date: "Date",
     disclaimer:
       "Net pay is an estimate. The final amount depends on the tax card, age, employer payroll calculation and possible extra deductions.",
     fields: {
@@ -205,6 +348,49 @@ const copy = {
     feedbackText: "Palaute ja korjaukset ovat tervetulleita.",
     feedbackButton: "Lähetä palautetta",
     feedbackSubject: "PalkkaPro palaute",
+    premiumPreview: "Premium-esikatselu",
+    shiftPlannerTitle: "Työpäivien suunnittelija",
+    shiftPlannerIntro:
+      "Valitse päivä, lisää työaika ja katso kuukauden arvio.",
+    selectedMonth: "Valittu kuukausi",
+    addWorkday: "Lisää työpäivä",
+    calendarTitle: "Kalenteri",
+    clickDayToAdd: "Valitse päivä ja lisää työaika.",
+    previousMonth: "Edellinen kuukausi",
+    nextMonth: "Seuraava kuukausi",
+    editWorkday: "Lisää työpäivä",
+    edit: "Muokkaa",
+    startTime: "Alku",
+    endTime: "Loppu",
+    breakMinutes: "Tauko",
+    saveWorkday: "Tallenna työpäivä",
+    close: "Sulje",
+    autoCalculated: "Automaattisesti laskettu",
+    totalWorked: "Työtunnit",
+    eveningShort: "Ilta",
+    nightShort: "Yö",
+    sundayShort: "Sunnuntai",
+    reportButton: "Näytä raportti",
+    reportTitle: "Palkkaraportti",
+    dailyReport: "Päivät",
+    weeklyReport: "Viikot",
+    monthlyReport: "Kuukausi",
+    bonusSummary: "Lisien yhteenveto",
+    noReportRows: "Lisää työpäiviä nähdäksesi raportin.",
+    period: "Jakso",
+    hours: "Tunnit",
+    amount: "Summa",
+    weekdays: ["Ma", "Ti", "Ke", "To", "Pe", "La", "Su"],
+    savedWorkdays: "Tallennetut työpäivät",
+    recentWorkdays: "Viimeisimmät työpäivät",
+    allWorkdays: "Kaikki työpäivät",
+    showAll: "Näytä kaikki",
+    noWorkdays: "Tälle kuukaudelle ei ole vielä lisätty työpäiviä.",
+    shiftSummary: "Kuukauden yhteenveto",
+    workdays: "Työpäivät",
+    remove: "Poista",
+    note: "Muistiinpano",
+    date: "Päivämäärä",
     disclaimer:
       "Nettopalkka on arvio. Lopullinen summa riippuu verokortista, iästä, työnantajan palkanlaskennasta ja mahdollisista lisävähennyksistä.",
     fields: {
@@ -233,6 +419,133 @@ function parseInputNumber(value: string) {
 
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function roundHours(minutes: number) {
+  return Math.round((minutes / 60) * 100) / 100;
+}
+
+function parseTimeToMinutes(time?: string) {
+  if (!time || !time.includes(":")) {
+    return null;
+  }
+
+  const [hoursValue, minutesValue] = time.split(":").map(Number);
+
+  if (
+    !Number.isFinite(hoursValue) ||
+    !Number.isFinite(minutesValue) ||
+    hoursValue < 0 ||
+    hoursValue > 23 ||
+    minutesValue < 0 ||
+    minutesValue > 59
+  ) {
+    return null;
+  }
+
+  return hoursValue * 60 + minutesValue;
+}
+
+function getShiftCalculatedHours(shift: WorkShift) {
+  const startMinutes = parseTimeToMinutes(shift.startTime);
+  const endMinutes = parseTimeToMinutes(shift.endTime);
+
+  if (startMinutes === null || endMinutes === null) {
+    return {
+      normalHours: parseInputNumber(shift.normalHours),
+      eveningHours: parseInputNumber(shift.eveningHours),
+      nightHours: parseInputNumber(shift.nightHours),
+      sundayHours: parseInputNumber(shift.sundayHours),
+      overtime50Hours: parseInputNumber(shift.overtime50Hours),
+      overtime100Hours: parseInputNumber(shift.overtime100Hours),
+      special50Hours: parseInputNumber(shift.special50Hours),
+      holiday100Hours: parseInputNumber(shift.holiday100Hours),
+    };
+  }
+
+  const endWithOvernight = endMinutes <= startMinutes ? endMinutes + DAY_MINUTES : endMinutes;
+  const rawWorkedMinutes = Math.max(0, endWithOvernight - startMinutes);
+  const breakMinutes = Math.min(
+    rawWorkedMinutes,
+    Math.max(0, parseInputNumber(shift.breakMinutes ?? "0")),
+  );
+  const workedMinutes = rawWorkedMinutes - breakMinutes;
+  const minutesByType = {
+    normal: 0,
+    evening: 0,
+    night: 0,
+  };
+
+  for (let minute = startMinutes; minute < endWithOvernight; minute += 1) {
+    const minuteOfDay = minute % DAY_MINUTES;
+
+    if (minuteOfDay < NIGHT_END_MINUTES || minuteOfDay >= NIGHT_START_MINUTES) {
+      minutesByType.night += 1;
+    } else if (minuteOfDay >= EVENING_START_MINUTES) {
+      minutesByType.evening += 1;
+    } else {
+      minutesByType.normal += 1;
+    }
+  }
+
+  let remainingBreak = breakMinutes;
+  const subtractBreak = (key: keyof typeof minutesByType) => {
+    const removed = Math.min(minutesByType[key], remainingBreak);
+    minutesByType[key] -= removed;
+    remainingBreak -= removed;
+  };
+
+  subtractBreak("normal");
+  subtractBreak("evening");
+  subtractBreak("night");
+
+  const isSunday = new Date(`${shift.date}T12:00:00`).getDay() === 0;
+
+  return {
+    normalHours: roundHours(workedMinutes),
+    eveningHours: roundHours(minutesByType.evening),
+    nightHours: roundHours(minutesByType.night),
+    sundayHours: isSunday ? roundHours(workedMinutes) : 0,
+    overtime50Hours: parseInputNumber(shift.overtime50Hours),
+    overtime100Hours: parseInputNumber(shift.overtime100Hours),
+    special50Hours: parseInputNumber(shift.special50Hours),
+    holiday100Hours: parseInputNumber(shift.holiday100Hours),
+  };
+}
+
+function getCalendarDays(month: string) {
+  const [year, monthIndex] = month.split("-").map(Number);
+  const firstDay = new Date(year, monthIndex - 1, 1);
+  const daysInMonth = new Date(year, monthIndex, 0).getDate();
+  const emptyDays = (firstDay.getDay() + 6) % 7;
+
+  return [
+    ...Array.from({ length: emptyDays }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, index) => {
+      const day = index + 1;
+      return `${month}-${day.toString().padStart(2, "0")}`;
+    }),
+  ];
+}
+
+function formatDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getWeekRangeLabel(dateKey: string) {
+  const date = new Date(`${dateKey}T12:00:00`);
+  const mondayOffset = (date.getDay() + 6) % 7;
+  const weekStart = new Date(date);
+  weekStart.setDate(date.getDate() - mondayOffset);
+
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+
+  return `${formatDateKey(weekStart)} - ${formatDateKey(weekEnd)}`;
 }
 
 export default function Home() {
@@ -276,6 +589,15 @@ export default function Home() {
   const [otherDeductionsPercentage, setOtherDeductionsPercentage] = useState(
     defaults.otherDeductionsPercentage,
   );
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth);
+  const [shiftDraft, setShiftDraft] = useState<WorkShift>(createEmptyShift);
+  const [workShifts, setWorkShifts] = useState<WorkShift[]>([]);
+  const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
+  const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isAllShiftsModalOpen, setIsAllShiftsModalOpen] = useState(false);
+  const [reportMode, setReportMode] = useState<ReportMode>("daily");
+  const hasLoadedShifts = useRef(false);
 
   useEffect(() => {
     const savedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
@@ -298,6 +620,35 @@ export default function Home() {
       window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
     }
   }, [language]);
+
+  useEffect(() => {
+    const savedShifts = window.localStorage.getItem(SHIFTS_STORAGE_KEY);
+
+    window.setTimeout(() => {
+      if (savedShifts) {
+        try {
+          const parsed = JSON.parse(savedShifts);
+
+          if (Array.isArray(parsed)) {
+            setWorkShifts(parsed);
+          }
+        } catch {
+          window.localStorage.removeItem(SHIFTS_STORAGE_KEY);
+        }
+      }
+
+      hasLoadedShifts.current = true;
+    }, 0);
+  }, []);
+
+  useEffect(() => {
+    if (hasLoadedShifts.current) {
+      window.localStorage.setItem(
+        SHIFTS_STORAGE_KEY,
+        JSON.stringify(workShifts),
+      );
+    }
+  }, [workShifts]);
 
   const totals = useMemo(() => {
     const hourlyWageNumber = parseInputNumber(hourlyWage);
@@ -386,6 +737,210 @@ export default function Home() {
     taxPercentage,
     unemploymentPercentage,
   ]);
+
+  const filteredShifts = useMemo(
+    () =>
+      workShifts
+        .filter((shift) => shift.date.startsWith(selectedMonth))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    [selectedMonth, workShifts],
+  );
+
+  const shiftTotals = useMemo(() => {
+    const hourlyWageNumber = parseInputNumber(hourlyWage);
+    const taxPercentageNumber = parseInputNumber(taxPercentage);
+    const pensionPercentageNumber = parseInputNumber(pensionPercentage);
+    const unemploymentPercentageNumber = parseInputNumber(unemploymentPercentage);
+    const otherDeductionsPercentageNumber = parseInputNumber(
+      otherDeductionsPercentage,
+    );
+    const totalsByHours = filteredShifts.reduce(
+      (sum, shift) => {
+        const shiftHours = getShiftCalculatedHours(shift);
+
+        return {
+          normalHours: sum.normalHours + shiftHours.normalHours,
+          eveningHours: sum.eveningHours + shiftHours.eveningHours,
+          nightHours: sum.nightHours + shiftHours.nightHours,
+          sundayHours: sum.sundayHours + shiftHours.sundayHours,
+          overtime50Hours: sum.overtime50Hours + shiftHours.overtime50Hours,
+          overtime100Hours: sum.overtime100Hours + shiftHours.overtime100Hours,
+          special50Hours: sum.special50Hours + shiftHours.special50Hours,
+          holiday100Hours: sum.holiday100Hours + shiftHours.holiday100Hours,
+        };
+      },
+      {
+        normalHours: 0,
+        eveningHours: 0,
+        nightHours: 0,
+        sundayHours: 0,
+        overtime50Hours: 0,
+        overtime100Hours: 0,
+        special50Hours: 0,
+        holiday100Hours: 0,
+      },
+    );
+
+    const basePay = hourlyWageNumber * totalsByHours.normalHours;
+    const eveningBonusTotal = totalsByHours.eveningHours * EVENING_BONUS;
+    const nightBonusTotal = totalsByHours.nightHours * NIGHT_BONUS;
+    const sundayBonus = hourlyWageNumber * totalsByHours.sundayHours;
+    const holidayBonus100 = hourlyWageNumber * totalsByHours.holiday100Hours;
+    const specialBonus50 = hourlyWageNumber * 0.5 * totalsByHours.special50Hours;
+    const overtimePay =
+      totalsByHours.overtime50Hours * hourlyWageNumber * 1.5 +
+      totalsByHours.overtime100Hours * hourlyWageNumber * 2;
+    const grossPay =
+      basePay +
+      eveningBonusTotal +
+      nightBonusTotal +
+      sundayBonus +
+      holidayBonus100 +
+      specialBonus50 +
+      overtimePay;
+    const totalDeductionsPercent =
+      taxPercentageNumber +
+      pensionPercentageNumber +
+      unemploymentPercentageNumber +
+      otherDeductionsPercentageNumber;
+    const estimatedNetPay = grossPay * (1 - totalDeductionsPercent / 100);
+    const totalHours =
+      totalsByHours.normalHours +
+      totalsByHours.overtime50Hours +
+      totalsByHours.overtime100Hours;
+
+    return {
+      ...totalsByHours,
+      basePay,
+      eveningBonusTotal,
+      grossPay,
+      holidayBonus100,
+      nightBonusTotal,
+      overtimePay,
+      specialBonus50,
+      sundayBonus,
+      estimatedNetPay,
+      totalHours,
+    };
+  }, [
+    filteredShifts,
+    hourlyWage,
+    otherDeductionsPercentage,
+    pensionPercentage,
+    taxPercentage,
+    unemploymentPercentage,
+  ]);
+
+  const calendarDays = useMemo(
+    () => getCalendarDays(selectedMonth),
+    [selectedMonth],
+  );
+
+  const shiftsByDate = useMemo(
+    () =>
+      filteredShifts.reduce<Record<string, WorkShift[]>>((grouped, shift) => {
+        grouped[shift.date] = [...(grouped[shift.date] ?? []), shift];
+        return grouped;
+      }, {}),
+    [filteredShifts],
+  );
+
+  const shiftDraftPreview = useMemo(
+    () => getShiftCalculatedHours(shiftDraft),
+    [shiftDraft],
+  );
+
+  const recentShifts = useMemo(
+    () => [...filteredShifts].reverse().slice(0, 5),
+    [filteredShifts],
+  );
+
+  const reportRows = useMemo(() => {
+    const hourlyWageNumber = parseInputNumber(hourlyWage);
+    const buildReportRow = (label: string, shifts: WorkShift[]) => {
+      const hours = shifts.reduce(
+        (sum, shift) => {
+          const shiftHours = getShiftCalculatedHours(shift);
+
+          return {
+            normalHours: sum.normalHours + shiftHours.normalHours,
+            eveningHours: sum.eveningHours + shiftHours.eveningHours,
+            nightHours: sum.nightHours + shiftHours.nightHours,
+            sundayHours: sum.sundayHours + shiftHours.sundayHours,
+            overtime50Hours: sum.overtime50Hours + shiftHours.overtime50Hours,
+            overtime100Hours:
+              sum.overtime100Hours + shiftHours.overtime100Hours,
+            special50Hours: sum.special50Hours + shiftHours.special50Hours,
+            holiday100Hours: sum.holiday100Hours + shiftHours.holiday100Hours,
+          };
+        },
+        {
+          normalHours: 0,
+          eveningHours: 0,
+          nightHours: 0,
+          sundayHours: 0,
+          overtime50Hours: 0,
+          overtime100Hours: 0,
+          special50Hours: 0,
+          holiday100Hours: 0,
+        },
+      );
+      const basePay = hourlyWageNumber * hours.normalHours;
+      const eveningBonusTotal = hours.eveningHours * EVENING_BONUS;
+      const nightBonusTotal = hours.nightHours * NIGHT_BONUS;
+      const sundayBonus = hourlyWageNumber * hours.sundayHours;
+      const holidayBonus100 = hourlyWageNumber * hours.holiday100Hours;
+      const specialBonus50 = hourlyWageNumber * 0.5 * hours.special50Hours;
+      const overtimePay =
+        hours.overtime50Hours * hourlyWageNumber * 1.5 +
+        hours.overtime100Hours * hourlyWageNumber * 2;
+
+      return {
+        ...hours,
+        basePay,
+        eveningBonusTotal,
+        grossPay:
+          basePay +
+          eveningBonusTotal +
+          nightBonusTotal +
+          sundayBonus +
+          holidayBonus100 +
+          specialBonus50 +
+          overtimePay,
+        holidayBonus100,
+        label,
+        nightBonusTotal,
+        overtimePay,
+        specialBonus50,
+        sundayBonus,
+      };
+    };
+
+    if (reportMode === "daily") {
+      return Object.entries(shiftsByDate)
+        .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+        .map(([date, shifts]) => buildReportRow(date, shifts));
+    }
+
+    if (reportMode === "monthly") {
+      return filteredShifts.length > 0
+        ? [buildReportRow(selectedMonth, filteredShifts)]
+        : [];
+    }
+
+    const shiftsByWeek = filteredShifts.reduce<Record<string, WorkShift[]>>(
+      (grouped, shift) => {
+        const weekLabel = getWeekRangeLabel(shift.date);
+        grouped[weekLabel] = [...(grouped[weekLabel] ?? []), shift];
+        return grouped;
+      },
+      {},
+    );
+
+    return Object.entries(shiftsByWeek).map(([week, shifts]) =>
+      buildReportRow(week, shifts),
+    );
+  }, [filteredShifts, hourlyWage, reportMode, selectedMonth, shiftsByDate]);
 
   const fieldText = t.fields as unknown as Record<string, [string, string]>;
 
@@ -525,6 +1080,69 @@ export default function Home() {
     setPensionPercentage(defaults.pensionPercentage);
     setUnemploymentPercentage(defaults.unemploymentPercentage);
     setOtherDeductionsPercentage(defaults.otherDeductionsPercentage);
+  }
+
+  function updateShiftDraft(field: keyof WorkShift, value: string) {
+    setShiftDraft((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function moveSelectedMonth(change: number) {
+    setSelectedMonth((current) => {
+      const [year, month] = current.split("-").map(Number);
+      const nextDate = new Date(year, month - 1 + change, 1);
+
+      return `${nextDate.getFullYear()}-${(nextDate.getMonth() + 1)
+        .toString()
+        .padStart(2, "0")}`;
+    });
+  }
+
+  function openShiftModal(date: string) {
+    setShiftDraft(createEmptyShift(date));
+    setEditingShiftId(null);
+    setIsShiftModalOpen(true);
+  }
+
+  function openEditShiftModal(shift: WorkShift) {
+    setShiftDraft({
+      ...createEmptyShift(shift.date),
+      ...shift,
+    });
+    setEditingShiftId(shift.id);
+    setIsShiftModalOpen(true);
+  }
+
+  function saveShift(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const calculatedHours = getShiftCalculatedHours(shiftDraft);
+    const savedShift = {
+      ...shiftDraft,
+      id: editingShiftId ?? crypto.randomUUID(),
+      normalHours: calculatedHours.normalHours.toString(),
+      eveningHours: calculatedHours.eveningHours.toString(),
+      nightHours: calculatedHours.nightHours.toString(),
+      sundayHours: calculatedHours.sundayHours.toString(),
+    };
+
+    setWorkShifts((current) =>
+      editingShiftId
+        ? current.map((shift) =>
+            shift.id === editingShiftId ? savedShift : shift,
+          )
+        : [...current, savedShift],
+    );
+    setSelectedMonth(savedShift.date.slice(0, 7));
+    setShiftDraft(createEmptyShift());
+    setEditingShiftId(null);
+    setIsShiftModalOpen(false);
+  }
+
+  function removeShift(id: string) {
+    setWorkShifts((current) => current.filter((shift) => shift.id !== id));
   }
 
   return (
@@ -798,6 +1416,498 @@ export default function Home() {
           </aside>
         </section>
 
+        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-2xl">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-bold">
+                  {t.shiftPlannerTitle as string}
+                </h2>
+                <span className="rounded-md border border-teal-200 bg-teal-50 px-2 py-0.5 text-[11px] font-bold uppercase text-teal-700">
+                  {t.premiumPreview as string}
+                </span>
+              </div>
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                {t.shiftPlannerIntro as string}
+              </p>
+            </div>
+
+            <label className="w-full max-w-56">
+              <span className="text-xs font-bold uppercase text-slate-500">
+                {t.selectedMonth as string}
+              </span>
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(event) => setSelectedMonth(event.target.value)}
+                className="mt-2 h-11 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm font-semibold outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+              />
+            </label>
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:mt-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.72fr)] xl:gap-5">
+            <section className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 sm:p-3">
+              <div className="flex flex-col gap-2 rounded-md bg-white p-2.5 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:justify-between sm:bg-transparent sm:p-0 sm:ring-0">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-slate-700">
+                    {t.calendarTitle as string}
+                  </h3>
+                  <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                    {t.clickDayToAdd as string}
+                  </p>
+                </div>
+                <div className="grid grid-cols-[32px_minmax(0,1fr)_32px] items-center gap-2 sm:flex sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => moveSelectedMonth(-1)}
+                    className="grid size-8 place-items-center rounded-md border border-slate-200 bg-white text-slate-600 transition hover:border-teal-300 hover:text-teal-700"
+                    aria-label={t.previousMonth as string}
+                    title={t.previousMonth as string}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <p className="min-w-0 text-center text-sm font-bold text-slate-800 sm:min-w-24 sm:text-slate-700">
+                    {selectedMonth}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => moveSelectedMonth(1)}
+                    className="grid size-8 place-items-center rounded-md border border-slate-200 bg-white text-slate-600 transition hover:border-teal-300 hover:text-teal-700"
+                    aria-label={t.nextMonth as string}
+                    title={t.nextMonth as string}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-slate-400 sm:mt-4 sm:text-[11px]">
+                {(t.weekdays as string[]).map((weekday) => (
+                  <span key={weekday}>{weekday}</span>
+                ))}
+              </div>
+
+              <div className="mt-1.5 grid grid-cols-7 gap-1 sm:mt-2">
+                {calendarDays.map((date, index) => {
+                  const dayShifts = date ? shiftsByDate[date] ?? [] : [];
+                  const dayHours = dayShifts.reduce(
+                    (sum, shift) => {
+                      const shiftHours = getShiftCalculatedHours(shift);
+                      return sum + shiftHours.normalHours;
+                    },
+                    0,
+                  );
+                  const isSunday =
+                    date !== null && new Date(`${date}T12:00:00`).getDay() === 0;
+
+                  return date ? (
+                    <button
+                      key={date}
+                      type="button"
+                      data-testid={`calendar-day-${date}`}
+                      onClick={() => openShiftModal(date)}
+                      className={`flex min-h-14 flex-col rounded-md border p-1.5 text-left transition hover:border-teal-300 hover:bg-white focus:outline-none focus:ring-2 focus:ring-teal-100 sm:min-h-20 sm:p-2 ${
+                        dayShifts.length > 0
+                          ? "border-teal-200 bg-white"
+                          : "border-slate-200 bg-white/70"
+                      } ${isSunday ? "text-teal-800" : "text-slate-800"}`}
+                    >
+                      <span className="text-xs font-bold sm:text-sm">
+                        {Number(date.slice(-2))}
+                      </span>
+                      {dayShifts.length > 0 ? (
+                        <span className="mt-auto block rounded bg-teal-50 px-1 py-0.5 text-center text-[9px] font-bold leading-4 text-teal-700 sm:mt-2 sm:px-1.5 sm:py-1 sm:text-left sm:text-[11px]">
+                          {dayShifts.length} / {roundHours(dayHours * 60)} h
+                        </span>
+                      ) : null}
+                    </button>
+                  ) : (
+                    <span key={`empty-${index}`} className="min-h-14 sm:min-h-20" />
+                  );
+                })}
+              </div>
+            </section>
+
+            <div className="space-y-3">
+              <section className="rounded-lg border border-slate-200 bg-white p-4">
+                <h3 className="text-sm font-bold text-slate-700">
+                  {t.shiftSummary as string}
+                </h3>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <MiniStat
+                    label={t.workdays as string}
+                    value={filteredShifts.length.toString()}
+                  />
+                  <MiniStat
+                    label={t.hoursBadge as string}
+                    value={`${shiftTotals.totalHours} h`}
+                  />
+                  <MiniStat
+                    label={t.grossPay as string}
+                    value={money.format(shiftTotals.grossPay)}
+                  />
+                  <MiniStat
+                    label={t.netPay as string}
+                    value={money.format(shiftTotals.estimatedNetPay)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsReportModalOpen(true)}
+                  className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-700 transition hover:border-teal-300 hover:bg-white hover:text-teal-700"
+                >
+                  <BarChart3 size={14} />
+                  {t.reportButton as string}
+                </button>
+              </section>
+
+              <section className="rounded-lg border border-slate-200 bg-white p-4">
+                <h3 className="text-sm font-bold text-slate-700">
+                  {t.recentWorkdays as string}
+                </h3>
+                <div className="mt-3 space-y-2">
+                  {filteredShifts.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      {t.noWorkdays as string}
+                    </p>
+                  ) : (
+                    recentShifts.map((shift) => (
+                      <ShiftListItem
+                        key={shift.id}
+                        editLabel={t.edit as string}
+                        removeLabel={t.remove as string}
+                        shift={shift}
+                        onEdit={openEditShiftModal}
+                        onRemove={removeShift}
+                      />
+                    ))
+                  )}
+                </div>
+                {filteredShifts.length > recentShifts.length ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsAllShiftsModalOpen(true)}
+                    className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-700 transition hover:border-teal-300 hover:bg-white hover:text-teal-700"
+                  >
+                    {t.showAll as string}
+                  </button>
+                ) : null}
+              </section>
+            </div>
+          </div>
+        </section>
+
+        {isShiftModalOpen ? (
+          <div className="fixed inset-0 z-50 flex items-end bg-slate-950/50 p-3 sm:items-center sm:justify-center">
+            <form
+              onSubmit={saveShift}
+              className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl sm:p-5"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold uppercase text-teal-700">
+                    {t.premiumPreview as string}
+                  </p>
+                  <h2 className="mt-1 text-xl font-bold text-slate-950">
+                    {editingShiftId
+                      ? (t.edit as string)
+                      : (t.editWorkday as string)}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {shiftDraft.date}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingShiftId(null);
+                    setIsShiftModalOpen(false);
+                  }}
+                  className="h-9 rounded-md border border-slate-200 px-3 text-xs font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  {t.close as string}
+                </button>
+              </div>
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <PlannerInput
+                  label={t.date as string}
+                  value={shiftDraft.date}
+                  onChange={(value) => updateShiftDraft("date", value)}
+                  type="date"
+                />
+                <PlannerInput
+                  label={t.breakMinutes as string}
+                  value={shiftDraft.breakMinutes ?? "0"}
+                  onChange={(value) => updateShiftDraft("breakMinutes", value)}
+                  suffix="min"
+                />
+                <PlannerInput
+                  label={t.startTime as string}
+                  value={shiftDraft.startTime ?? ""}
+                  onChange={(value) => updateShiftDraft("startTime", value)}
+                  type="time"
+                />
+                <PlannerInput
+                  label={t.endTime as string}
+                  value={shiftDraft.endTime ?? ""}
+                  onChange={(value) => updateShiftDraft("endTime", value)}
+                  type="time"
+                />
+              </div>
+
+              <section className="mt-4 rounded-lg border border-teal-100 bg-teal-50 p-3">
+                <h3 className="text-sm font-bold text-teal-900">
+                  {t.autoCalculated as string}
+                </h3>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <MiniStat
+                    label={t.totalWorked as string}
+                    value={`${shiftDraftPreview.normalHours} h`}
+                  />
+                  <MiniStat
+                    label={t.eveningShort as string}
+                    value={`${shiftDraftPreview.eveningHours} h`}
+                  />
+                  <MiniStat
+                    label={t.nightShort as string}
+                    value={`${shiftDraftPreview.nightHours} h`}
+                  />
+                  <MiniStat
+                    label={t.sundayShort as string}
+                    value={`${shiftDraftPreview.sundayHours} h`}
+                  />
+                </div>
+              </section>
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <PlannerInput
+                  label={fieldText.overtime50Hours[0]}
+                  value={shiftDraft.overtime50Hours}
+                  onChange={(value) =>
+                    updateShiftDraft("overtime50Hours", value)
+                  }
+                  suffix="h"
+                />
+                <PlannerInput
+                  label={fieldText.overtime100Hours[0]}
+                  value={shiftDraft.overtime100Hours}
+                  onChange={(value) =>
+                    updateShiftDraft("overtime100Hours", value)
+                  }
+                  suffix="h"
+                />
+                <PlannerInput
+                  label={fieldText.special50Hours[0]}
+                  value={shiftDraft.special50Hours}
+                  onChange={(value) => updateShiftDraft("special50Hours", value)}
+                  suffix="h"
+                />
+                <PlannerInput
+                  label={fieldText.holiday100Hours[0]}
+                  value={shiftDraft.holiday100Hours}
+                  onChange={(value) =>
+                    updateShiftDraft("holiday100Hours", value)
+                  }
+                  suffix="h"
+                />
+                <div className="sm:col-span-2">
+                  <PlannerInput
+                    label={t.note as string}
+                    value={shiftDraft.note}
+                    onChange={(value) => updateShiftDraft("note", value)}
+                    type="text"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-slate-800 sm:w-auto"
+              >
+                <Plus size={16} />
+                {t.saveWorkday as string}
+              </button>
+            </form>
+          </div>
+        ) : null}
+
+        {isAllShiftsModalOpen ? (
+          <div className="fixed inset-0 z-50 flex items-end bg-slate-950/50 p-3 sm:items-center sm:justify-center">
+            <section className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl sm:p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-950">
+                    {t.allWorkdays as string}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {selectedMonth}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAllShiftsModalOpen(false)}
+                  className="h-9 rounded-md border border-slate-200 px-3 text-xs font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  {t.close as string}
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {filteredShifts.length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    {t.noWorkdays as string}
+                  </p>
+                ) : (
+                  filteredShifts.map((shift) => (
+                    <ShiftListItem
+                      key={shift.id}
+                      editLabel={t.edit as string}
+                      removeLabel={t.remove as string}
+                      shift={shift}
+                      onEdit={(selectedShift) => {
+                        setIsAllShiftsModalOpen(false);
+                        openEditShiftModal(selectedShift);
+                      }}
+                      onRemove={removeShift}
+                    />
+                  ))
+                )}
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+        {isReportModalOpen ? (
+          <div className="fixed inset-0 z-50 flex items-end bg-slate-950/50 p-3 sm:items-center sm:justify-center">
+            <section className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl sm:p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold uppercase text-teal-700">
+                    {t.premiumPreview as string}
+                  </p>
+                  <h2 className="mt-1 text-xl font-bold text-slate-950">
+                    {t.reportTitle as string}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {selectedMonth}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsReportModalOpen(false)}
+                  className="h-9 rounded-md border border-slate-200 px-3 text-xs font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  {t.close as string}
+                </button>
+              </div>
+
+              <section className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <h3 className="text-sm font-bold text-slate-700">
+                  {t.bonusSummary as string}
+                </h3>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <ReportMiniStat
+                    label={t.eveningBonus as string}
+                    hours={shiftTotals.eveningHours}
+                    value={money.format(shiftTotals.eveningBonusTotal)}
+                  />
+                  <ReportMiniStat
+                    label={t.nightBonus as string}
+                    hours={shiftTotals.nightHours}
+                    value={money.format(shiftTotals.nightBonusTotal)}
+                  />
+                  <ReportMiniStat
+                    label={t.sundayBonus as string}
+                    hours={shiftTotals.sundayHours}
+                    value={money.format(shiftTotals.sundayBonus)}
+                  />
+                  <ReportMiniStat
+                    label={t.specialBonus as string}
+                    hours={shiftTotals.special50Hours}
+                    value={money.format(shiftTotals.specialBonus50)}
+                  />
+                  <ReportMiniStat
+                    label={t.holidayBonus as string}
+                    hours={shiftTotals.holiday100Hours}
+                    value={money.format(shiftTotals.holidayBonus100)}
+                  />
+                  <ReportMiniStat
+                    label={t.overtimePay as string}
+                    hours={
+                      shiftTotals.overtime50Hours + shiftTotals.overtime100Hours
+                    }
+                    value={money.format(shiftTotals.overtimePay)}
+                  />
+                </div>
+              </section>
+
+              <div className="mt-4 inline-flex rounded-md border border-slate-200 bg-slate-50 p-1">
+                {(["daily", "weekly", "monthly"] as ReportMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setReportMode(mode)}
+                    className={`h-8 rounded px-3 text-xs font-bold transition ${
+                      reportMode === mode
+                        ? "bg-white text-teal-700 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    {
+                      {
+                        daily: t.dailyReport as string,
+                        weekly: t.weeklyReport as string,
+                        monthly: t.monthlyReport as string,
+                      }[mode]
+                    }
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-3 overflow-hidden rounded-lg border border-slate-200">
+                <div className="grid grid-cols-[1.15fr_0.7fr_0.85fr] bg-slate-50 px-3 py-2 text-[11px] font-bold uppercase text-slate-500">
+                  <span>{t.period as string}</span>
+                  <span className="text-right">{t.hours as string}</span>
+                  <span className="text-right">{t.amount as string}</span>
+                </div>
+                {reportRows.length === 0 ? (
+                  <p className="px-3 py-4 text-sm text-slate-500">
+                    {t.noReportRows as string}
+                  </p>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {reportRows.map((row) => (
+                      <div
+                        key={row.label}
+                        className="grid grid-cols-[1.15fr_0.7fr_0.85fr] px-3 py-2 text-sm"
+                      >
+                        <span className="font-semibold text-slate-800">
+                          {row.label}
+                        </span>
+                        <span className="text-right text-slate-600">
+                          {row.normalHours} h
+                        </span>
+                        <span className="text-right font-bold text-slate-900">
+                          {money.format(row.grossPay)}
+                        </span>
+                        <span className="col-span-3 mt-1 text-xs leading-5 text-slate-500">
+                          {t.eveningShort as string}: {row.eveningHours} h /{" "}
+                          {money.format(row.eveningBonusTotal)} ·{" "}
+                          {t.nightShort as string}: {row.nightHours} h /{" "}
+                          {money.format(row.nightBonusTotal)} ·{" "}
+                          {t.sundayShort as string}: {row.sundayHours} h /{" "}
+                          {money.format(row.sundayBonus)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : null}
+
         <footer className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-600 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p>{t.disclaimer as string}</p>
@@ -824,6 +1934,125 @@ function FieldGroup({ title, fields }: { title: string; fields: Field[] }) {
       <h3 className="mb-2 text-sm font-bold text-slate-700">{title}</h3>
       <FieldGrid fields={fields} />
     </section>
+  );
+}
+
+function PlannerInput({
+  label,
+  value,
+  onChange,
+  suffix,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  suffix?: string;
+  type?: "date" | "text" | "time";
+}) {
+  return (
+    <label className="rounded-lg border border-slate-200 bg-white p-3 transition focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-100">
+      <span className="text-xs font-bold text-slate-600">{label}</span>
+      <span className="mt-2 flex h-11 items-center rounded-md border border-slate-200 bg-slate-50 px-3">
+        <input
+          type={type}
+          inputMode={type === "text" ? "decimal" : undefined}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-full min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none"
+        />
+        {suffix ? (
+          <span className="ml-2 shrink-0 text-xs font-semibold text-slate-500">
+            {suffix}
+          </span>
+        ) : null}
+      </span>
+    </label>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-slate-50 p-3">
+      <p className="text-xs font-semibold text-slate-500">{label}</p>
+      <p className="mt-1 text-base font-bold text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function ShiftListItem({
+  editLabel,
+  onEdit,
+  onRemove,
+  removeLabel,
+  shift,
+}: {
+  editLabel: string;
+  onEdit: (shift: WorkShift) => void;
+  onRemove: (id: string) => void;
+  removeLabel: string;
+  shift: WorkShift;
+}) {
+  const calculatedShift = getShiftCalculatedHours(shift);
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-slate-100 bg-slate-50 px-3 py-2">
+      <button
+        type="button"
+        onClick={() => onEdit(shift)}
+        className="min-w-0 flex-1 text-left"
+      >
+        <p className="text-sm font-bold text-slate-800">
+          {shift.date}
+          {shift.startTime && shift.endTime
+            ? `, ${shift.startTime}-${shift.endTime}`
+            : ""}
+        </p>
+        <p className="text-xs text-slate-500">
+          {calculatedShift.normalHours} h{shift.note ? ` - ${shift.note}` : ""}
+        </p>
+      </button>
+      <div className="flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onEdit(shift)}
+          className="grid size-8 place-items-center rounded-md text-slate-400 transition hover:bg-white hover:text-teal-700"
+          aria-label={editLabel}
+          title={editLabel}
+        >
+          <Pencil size={15} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onRemove(shift.id)}
+          className="grid size-8 place-items-center rounded-md text-slate-400 transition hover:bg-white hover:text-red-600"
+          aria-label={removeLabel}
+          title={removeLabel}
+        >
+          <Trash2 size={15} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ReportMiniStat({
+  label,
+  hours,
+  value,
+}: {
+  label: string;
+  hours: number;
+  value: string;
+}) {
+  return (
+    <div className="rounded-md bg-white p-3">
+      <p className="text-xs font-semibold text-slate-500">
+        <BonusPercentLabel label={label} />
+      </p>
+      <p className="mt-1 text-sm font-bold text-slate-900">{value}</p>
+      <p className="mt-0.5 text-xs text-slate-500">{hours} h</p>
+    </div>
   );
 }
 
