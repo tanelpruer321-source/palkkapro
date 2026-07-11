@@ -159,7 +159,7 @@ const copy = {
     formTitle: "Sisesta andmed",
     formHelp: "Kõik väljad on muudetavad.",
     calculatorTab: "Kalkulaator",
-    plannerTab: "Tööplanner",
+    plannerTab: "Tööplaan",
     reset: "Taasta algväärtused",
     workSection: "Tunnid ja lisad",
     paySettingsSection: "Palgaseaded",
@@ -169,7 +169,9 @@ const copy = {
     detailsSection: "Detailne jaotus",
     deductionsSection: "Mahaarvamised",
     netPay: "Hinnanguline netopalk",
+    netPayShort: "Hinnanguline netopalk",
     grossPay: "Brutopalk",
+    grossPayShort: "Bruto",
     deductions: "Mahaarvamised",
     paySection: "Palk",
     basePay: "Põhipalk",
@@ -234,7 +236,7 @@ const copy = {
     shiftSummary: "Kuu kokkuvõte",
     earningsTrend: "Teenistuse trend",
     lastSixMonths: "Viimased 6 kuud",
-    averageMonth: "Keskmine kuu",
+    averageMonth: "Keskmine",
     workdays: "Tööpäevad",
     remove: "Kustuta",
     note: "Märkus",
@@ -278,7 +280,9 @@ const copy = {
     detailsSection: "Detailed breakdown",
     deductionsSection: "Deductions",
     netPay: "Estimated net pay",
+    netPayShort: "Estimated net pay",
     grossPay: "Gross pay",
+    grossPayShort: "Gross",
     deductions: "Deductions",
     paySection: "Pay",
     basePay: "Base pay",
@@ -343,7 +347,7 @@ const copy = {
     shiftSummary: "Monthly summary",
     earningsTrend: "Earnings trend",
     lastSixMonths: "Last 6 months",
-    averageMonth: "Average month",
+    averageMonth: "Average",
     workdays: "Workdays",
     remove: "Remove",
     note: "Note",
@@ -377,7 +381,7 @@ const copy = {
     formTitle: "Syötä tiedot",
     formHelp: "Kaikkia kenttiä voi muuttaa.",
     calculatorTab: "Laskuri",
-    plannerTab: "Työsuunnittelu",
+    plannerTab: "Työvuorot",
     reset: "Palauta arvot",
     workSection: "Tunnit ja lisät",
     paySettingsSection: "Palkka-asetukset",
@@ -387,7 +391,9 @@ const copy = {
     detailsSection: "Tarkempi erittely",
     deductionsSection: "Vähennykset",
     netPay: "Arvioitu nettopalkka",
+    netPayShort: "Arvioitu nettopalkka",
     grossPay: "Bruttopalkka",
+    grossPayShort: "Brutto",
     deductions: "Vähennykset",
     paySection: "Palkka",
     basePay: "Peruspalkka",
@@ -452,7 +458,7 @@ const copy = {
     shiftSummary: "Kuukauden yhteenveto",
     earningsTrend: "Ansioiden kehitys",
     lastSixMonths: "Viimeiset 6 kuukautta",
-    averageMonth: "Keskimääräinen kuukausi",
+    averageMonth: "Keskiarvo",
     workdays: "Työpäivät",
     remove: "Poista",
     note: "Muistiinpano",
@@ -862,6 +868,31 @@ export default function Home() {
       );
     }
   }, [storageConsent, workShifts]);
+
+  useEffect(() => {
+    const hasOpenModal =
+      isShiftModalOpen || isAllShiftsModalOpen || isReportModalOpen;
+
+    if (!hasOpenModal) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth =
+      window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = "hidden";
+
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+    };
+  }, [isAllShiftsModalOpen, isReportModalOpen, isShiftModalOpen]);
 
   const totals = useMemo(() => {
     const hourlyWageNumber = parseInputNumber(hourlyWage);
@@ -1517,35 +1548,37 @@ export default function Home() {
           </div>
         </header>
 
-        <nav
-          className="inline-flex w-full rounded-lg border border-slate-200 bg-white p-1 shadow-sm sm:w-fit"
-          aria-label="PalkkaPro tools"
-        >
-          {(["calculator", "planner"] as AppView[]).map((view) => (
-            <button
-              key={view}
-              type="button"
-              onClick={() => setActiveView(view)}
-              className={`group relative h-10 min-w-0 flex-1 rounded-md px-2 text-[13px] font-bold transition sm:flex-none sm:px-4 sm:text-sm ${
-                activeView === view
-                  ? "bg-slate-950 text-white shadow-sm"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-              }`}
-            >
-              {view === "calculator" ? (
-                <span className="inline-flex items-center justify-center gap-1.5">
-                  <Calculator size={14} aria-hidden="true" />
-                  <span>{t.calculatorTab as string}</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center justify-center gap-1.5">
-                  <Lock size={13} aria-hidden="true" />
-                  <span>{t.plannerTab as string}</span>
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
+        <div className="sticky top-0 z-30 -mx-4 bg-slate-50/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+          <nav
+            className="inline-flex w-full rounded-lg border border-slate-200 bg-white p-1 shadow-sm sm:w-fit"
+            aria-label="PalkkaPro tools"
+          >
+            {(["calculator", "planner"] as AppView[]).map((view) => (
+              <button
+                key={view}
+                type="button"
+                onClick={() => setActiveView(view)}
+                className={`group relative h-10 min-w-0 flex-1 rounded-md px-2 text-[13px] font-bold transition sm:flex-none sm:px-4 sm:text-sm ${
+                  activeView === view
+                    ? "bg-slate-950 text-white shadow-sm"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                {view === "calculator" ? (
+                  <span className="inline-flex items-center justify-center gap-1.5">
+                    <Calculator size={14} aria-hidden="true" />
+                    <span>{t.calculatorTab as string}</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center justify-center gap-1.5">
+                    <Lock size={13} aria-hidden="true" />
+                    <span>{t.plannerTab as string}</span>
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
 
         {activeView === "calculator" ? (
         <section className="grid gap-4 lg:grid-cols-[minmax(0,1.06fr)_minmax(360px,0.94fr)] lg:gap-5">
@@ -1884,7 +1917,7 @@ export default function Home() {
                 <h3 className="text-sm font-bold text-slate-700">
                   {t.shiftSummary as string}
                 </h3>
-                <div className="mt-3 grid grid-cols-2 gap-3">
+                <div className="mt-3 grid grid-cols-2 gap-2 lg:gap-3">
                   <MiniStat
                     label={t.workdays as string}
                     value={filteredShifts.length.toString()}
@@ -1894,11 +1927,11 @@ export default function Home() {
                     value={`${shiftTotals.totalHours} h`}
                   />
                   <MiniStat
-                    label={t.grossPay as string}
+                    label={t.grossPayShort as string}
                     value={money.format(shiftTotals.grossPay)}
                   />
                   <MiniStat
-                    label={t.netPay as string}
+                    label={t.netPayShort as string}
                     value={money.format(shiftTotals.estimatedNetPay)}
                   />
                 </div>
@@ -1956,13 +1989,13 @@ export default function Home() {
                   })}
                 </div>
 
-                <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="mt-3 grid grid-cols-[0.98fr_1.06fr_0.96fr] gap-2">
                   <MiniStat
-                    label={t.grossPay as string}
+                    label={t.grossPayShort as string}
                     value={money.format(earningsTrend.totalGrossPay)}
                   />
                   <MiniStat
-                    label={t.netPay as string}
+                    label={t.netPayShort as string}
                     value={money.format(earningsTrend.totalNetPay)}
                   />
                   <MiniStat
@@ -2433,9 +2466,13 @@ function PlannerInput({
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md bg-slate-50 p-3">
-      <p className="text-xs font-semibold text-slate-500">{label}</p>
-      <p className="mt-1 text-base font-bold text-slate-900">{value}</p>
+    <div className="min-w-0 rounded-md bg-slate-50 p-2.5 sm:p-3">
+      <p className="whitespace-normal text-[10px] font-semibold leading-3 text-slate-500 sm:text-xs sm:leading-4">
+        {label}
+      </p>
+      <p className="mt-1 break-words text-[13px] font-bold leading-4 text-slate-900 sm:text-base sm:leading-5">
+        {value}
+      </p>
     </div>
   );
 }
@@ -2506,11 +2543,13 @@ function ReportMiniStat({
   value: string;
 }) {
   return (
-    <div className="rounded-md bg-white p-3">
-      <p className="text-xs font-semibold text-slate-500">
+    <div className="min-w-0 rounded-md bg-white p-3">
+      <p className="break-words text-xs font-semibold leading-4 text-slate-500">
         <BonusPercentLabel label={label} />
       </p>
-      <p className="mt-1 text-sm font-bold text-slate-900">{value}</p>
+      <p className="mt-1 break-words text-sm font-bold leading-5 text-slate-900">
+        {value}
+      </p>
       <p className="mt-0.5 text-xs text-slate-500">{hours} h</p>
     </div>
   );
