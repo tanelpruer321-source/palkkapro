@@ -1489,66 +1489,49 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5 lg:gap-5 lg:px-8">
-        <header className="relative flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4 pr-20 shadow-sm md:flex-row md:items-center md:justify-between lg:p-5 lg:pr-20">
-          <label className="absolute right-3 top-3 lg:right-4 lg:top-4">
-            <span className="sr-only">{t.languageLabel as string}</span>
-            <select
-              value={language}
-              onChange={(event) => changeLanguage(event.target.value as Language)}
-              className="h-8 rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-700 outline-none transition hover:border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-              aria-label={t.languageLabel as string}
-            >
-              {languageOptions.map((option) => (
-                <option key={option.code} value={option.code}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+        <header className="relative rounded-lg border border-slate-200 bg-white p-4 pr-20 shadow-sm lg:p-5 lg:pr-20">
+            <label className="absolute right-3 top-3 lg:right-4 lg:top-4">
+              <span className="sr-only">{t.languageLabel as string}</span>
+              <select
+                value={language}
+                onChange={(event) => changeLanguage(event.target.value as Language)}
+                className="h-8 rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-700 outline-none transition hover:border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                aria-label={t.languageLabel as string}
+              >
+                {languageOptions.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <div className="max-w-3xl">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-3">
-                <Image
-                  src="/palkkapro-mark.svg"
-                  alt=""
-                  width={48}
-                  height={48}
-                  className="size-12 rounded-xl shadow-sm"
-                  aria-hidden="true"
-                />
-                <p className="text-2xl font-black tracking-normal text-slate-950">
-                  {t.brand as string}
-                </p>
+            <div className="max-w-3xl">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-3">
+                  <Image
+                    src="/palkkapro-mark.svg"
+                    alt=""
+                    width={48}
+                    height={48}
+                    className="size-12 rounded-xl shadow-sm"
+                    aria-hidden="true"
+                  />
+                  <p className="text-2xl font-black tracking-normal text-slate-950">
+                    {t.brand as string}
+                  </p>
+                </div>
+                <span className="rounded-md border border-teal-200 bg-teal-50 px-2 py-0.5 text-[11px] font-bold uppercase text-teal-700">
+                  {t.betaLabel as string}
+                </span>
               </div>
-              <span className="rounded-md border border-teal-200 bg-teal-50 px-2 py-0.5 text-[11px] font-bold uppercase text-teal-700">
-                {t.betaLabel as string}
-              </span>
+              <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
+                {t.intro as string}
+              </p>
             </div>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-              {t.intro as string}
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center md:mr-8 lg:mr-10">
-            <div className="flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-md bg-white text-teal-700 shadow-sm">
-                <Calculator size={20} />
-              </span>
-              <div>
-                <p className="text-sm text-slate-500">{t.hoursBadge as string}</p>
-                <p className="text-2xl font-bold">
-                  {activeView === "planner"
-                    ? shiftTotals.totalHours
-                    : totals.totalHours}{" "}
-                  h
-                </p>
-              </div>
-            </div>
-          </div>
         </header>
 
-        <div className="sticky top-0 z-30 -mx-4 border-b border-slate-200/80 bg-white/90 px-4 py-2 shadow-sm shadow-slate-900/5 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="sticky top-0 z-30 -mx-4 border-b border-slate-200/80 bg-white/90 px-4 py-2 shadow-sm shadow-slate-900/5 backdrop-blur-md sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-0">
           <nav
             className="inline-flex w-full rounded-lg border border-slate-200 bg-white p-1 shadow-sm sm:w-fit"
             aria-label="PalkkaPro tools"
@@ -1632,6 +1615,8 @@ export default function Home() {
               netValue={money.format(totals.estimatedNetPay)}
               grossLabel={t.grossPay as string}
               grossValue={money.format(totals.grossPay)}
+              hoursLabel={t.hoursBadge as string}
+              hoursValue={`${totals.totalHours} h`}
             />
           </div>
 
@@ -1716,6 +1701,8 @@ export default function Home() {
               netValue={money.format(totals.estimatedNetPay)}
               grossLabel={t.grossPay as string}
               grossValue={money.format(totals.grossPay)}
+              hoursLabel={t.hoursBadge as string}
+              hoursValue={`${totals.totalHours} h`}
             />
 
             <ResultSection title={t.paySection as string}>
@@ -2632,17 +2619,22 @@ function SalarySummary({
   netValue,
   grossLabel,
   grossValue,
+  hoursLabel,
+  hoursValue,
 }: {
   netLabel: string;
   netValue: string;
   grossLabel: string;
   grossValue: string;
+  hoursLabel: string;
+  hoursValue: string;
 }) {
   return (
     <section className="rounded-lg border border-slate-900 bg-slate-950 p-4 text-white shadow-sm lg:p-5">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
         <SalaryMetric label={netLabel} value={netValue} primary />
         <SalaryMetric label={grossLabel} value={grossValue} />
+        <SalaryMetric label={hoursLabel} value={hoursValue} />
       </div>
     </section>
   );
