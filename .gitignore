@@ -24,6 +24,7 @@ pnpm-debug.log*
 
 # testing and coverage
 coverage/
+.test-build/
 
 # TypeScript
 *.tsbuildinfo

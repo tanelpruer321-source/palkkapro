@@ -1,5 +1,14 @@
 "use client";
 
+import {
+  Cookie,
+  Database,
+  Eraser,
+  Info,
+  LockKeyhole,
+  Mail,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -11,6 +20,11 @@ type PrivacyCopy = {
   intro: string;
   updated: string;
   languageLabel: string;
+  nav: {
+    about: string;
+    privacy: string;
+    terms: string;
+  };
   sections: {
     title: string;
     body: string[];
@@ -26,6 +40,16 @@ const languageOptions: { code: Language; label: string }[] = [
   { code: "et", label: "ET" },
 ];
 
+const sectionIcons = [
+  Info,
+  Database,
+  Cookie,
+  ShieldCheck,
+  Eraser,
+  LockKeyhole,
+  Mail,
+] as const;
+
 const copy: Record<Language, PrivacyCopy> = {
   fi: {
     back: "Takaisin PalkkaProhon",
@@ -34,6 +58,11 @@ const copy: Record<Language, PrivacyCopy> = {
       "Tällä sivulla kerrotaan, miten PalkkaPro käsittelee selaimeen tallennettavia tietoja laskurin nykyisessä versiossa.",
     updated: "Päivitetty viimeksi: 10. heinäkuuta 2026",
     languageLabel: "Kieli",
+    nav: {
+      about: "Tietoa",
+      privacy: "Tietosuoja",
+      terms: "Käyttöehdot",
+    },
     sections: [
       {
         title: "Mikä PalkkaPro on",
@@ -80,7 +109,7 @@ const copy: Record<Language, PrivacyCopy> = {
       {
         title: "Yhteydenotto",
         body: [
-          "Tietosuojaan liittyvissä kysymyksissä, palautteessa tai korjauspyynnöissä voit ottaa yhteyttä osoitteeseen feedback@palkkapro.com.",
+          "Tietosuojaan liittyvissä kysymyksissä tai korjauspyynnöissä voit ottaa yhteyttä osoitteeseen contact@palkkapro.com.",
         ],
       },
     ],
@@ -92,6 +121,11 @@ const copy: Record<Language, PrivacyCopy> = {
       "This page explains how PalkkaPro handles browser-saved data in the current version of the calculator.",
     updated: "Last updated: July 10, 2026",
     languageLabel: "Language",
+    nav: {
+      about: "About",
+      privacy: "Privacy Policy",
+      terms: "Terms of Use",
+    },
     sections: [
       {
         title: "What PalkkaPro is",
@@ -138,7 +172,7 @@ const copy: Record<Language, PrivacyCopy> = {
       {
         title: "Contact",
         body: [
-          "For privacy questions, feedback or correction requests, contact PalkkaPro at feedback@palkkapro.com.",
+          "For privacy questions or correction requests, contact PalkkaPro at contact@palkkapro.com.",
         ],
       },
     ],
@@ -150,6 +184,11 @@ const copy: Record<Language, PrivacyCopy> = {
       "Sellel lehel selgitame, kuidas PalkkaPro käsitleb brauserisse salvestatavaid andmeid kalkulaatori praeguses versioonis.",
     updated: "Viimati uuendatud: 10. juuli 2026",
     languageLabel: "Keel",
+    nav: {
+      about: "Meist",
+      privacy: "Privaatsuspoliitika",
+      terms: "Kasutustingimused",
+    },
     sections: [
       {
         title: "Mis on PalkkaPro",
@@ -196,7 +235,7 @@ const copy: Record<Language, PrivacyCopy> = {
       {
         title: "Kontakt",
         body: [
-          "Privaatsusega seotud küsimuste, tagasiside või paranduste jaoks kirjuta aadressile feedback@palkkapro.com.",
+          "Privaatsusega seotud küsimuste või paranduste jaoks kirjuta aadressile contact@palkkapro.com.",
         ],
       },
     ],
@@ -205,18 +244,34 @@ const copy: Record<Language, PrivacyCopy> = {
 
 export default function PrivacyPage() {
   const [language, setLanguage] = useState<Language>("fi");
+  const [showMobilePageNav, setShowMobilePageNav] = useState(false);
   const t = copy[language];
 
   useEffect(() => {
-    const savedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    window.setTimeout(() => {
+      const savedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
 
-    if (
-      savedLanguage === "fi" ||
-      savedLanguage === "en" ||
-      savedLanguage === "et"
-    ) {
-      setLanguage(savedLanguage);
-    }
+      if (
+        savedLanguage === "fi" ||
+        savedLanguage === "en" ||
+        savedLanguage === "et"
+      ) {
+        setLanguage(savedLanguage);
+      }
+    }, 0);
+  }, []);
+
+  useEffect(() => {
+    const updateMobilePageNav = () => {
+      setShowMobilePageNav(window.scrollY > 24);
+    };
+
+    updateMobilePageNav();
+    window.addEventListener("scroll", updateMobilePageNav, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", updateMobilePageNav);
+    };
   }, []);
 
   function changeLanguage(nextLanguage: Language) {
@@ -229,7 +284,7 @@ export default function PrivacyPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
         <header className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <Link
@@ -256,36 +311,122 @@ export default function PrivacyPage() {
               </select>
             </label>
           </div>
-          <p className="mt-5 text-xs font-bold uppercase text-teal-700">
-            PalkkaPro
-          </p>
-          <h1 className="mt-2 text-3xl font-black tracking-normal text-slate-950 sm:text-4xl">
-            {t.title}
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-            {t.intro}
-          </p>
-          <p className="mt-2 text-xs font-semibold text-slate-400">
-            {t.updated}
-          </p>
+
+          <div className="mt-8 max-w-3xl">
+            <p className="text-xs font-bold uppercase text-teal-700">
+              PalkkaPro
+            </p>
+            <h1 className="mt-2 break-words text-2xl font-black tracking-normal text-slate-950 sm:text-4xl">
+              {t.title}
+            </h1>
+            <p className="mt-3 text-base leading-7 text-slate-600">
+              {t.intro}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-600">
+                {t.updated}
+              </span>
+            </div>
+          </div>
         </header>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="space-y-6">
-            {t.sections.map((section) => (
-              <article key={section.title}>
-                <h2 className="text-lg font-bold text-slate-900">
+        <div
+          className={`fixed inset-x-0 top-0 z-30 border-b border-slate-200/80 bg-white/90 px-4 py-2 shadow-sm shadow-slate-900/5 backdrop-blur-md transition duration-200 sm:px-6 lg:hidden ${
+            showMobilePageNav
+              ? "translate-y-0 opacity-100"
+              : "pointer-events-none -translate-y-full opacity-0"
+          }`}
+        >
+          <nav
+            className="inline-flex w-full rounded-lg border border-slate-200 bg-white p-1 shadow-sm"
+            aria-label="PalkkaPro pages"
+          >
+            <Link
+              href="/about"
+              className="h-10 min-w-0 flex-1 rounded-md px-2 text-center text-[12px] font-bold leading-10 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+            >
+              <span className="block truncate">{t.nav.about}</span>
+            </Link>
+            <Link
+              href="/privacy"
+              className="h-10 min-w-0 flex-1 rounded-md bg-slate-950 px-2 text-center text-[12px] font-bold leading-10 text-white shadow-sm"
+            >
+              <span className="block truncate">{t.nav.privacy}</span>
+            </Link>
+            <Link
+              href="/terms"
+              className="h-10 min-w-0 flex-1 rounded-md px-2 text-center text-[12px] font-bold leading-10 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+            >
+              <span className="block truncate">{t.nav.terms}</span>
+            </Link>
+          </nav>
+        </div>
+
+        <section className="grid gap-5 lg:grid-cols-2">
+          {t.sections.map((section, index) => {
+            const Icon = sectionIcons[index] ?? ShieldCheck;
+            const isContact = index === t.sections.length - 1;
+
+            return (
+              <article
+                key={section.title}
+                className={`rounded-lg border bg-white p-5 shadow-sm ${
+                  isContact
+                    ? "border-teal-200 bg-teal-50 lg:col-span-2"
+                    : "border-slate-200"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Icon
+                    className={`size-5 ${
+                      isContact ? "text-teal-800" : "text-teal-700"
+                    }`}
+                  />
+                  <h2
+                    className={`text-xl font-bold ${
+                      isContact ? "text-teal-950" : "text-slate-950"
+                    }`}
+                  >
                   {section.title}
                 </h2>
-                <div className="mt-2 space-y-2 text-sm leading-6 text-slate-600">
+                </div>
+                <div
+                  className={`mt-3 space-y-2 text-sm leading-6 ${
+                    isContact ? "text-teal-900" : "text-slate-600"
+                  }`}
+                >
                   {section.body.map((paragraph) => (
                     <p key={paragraph}>{paragraph}</p>
                   ))}
                 </div>
               </article>
-            ))}
-          </div>
+            );
+          })}
         </section>
+
+        <footer className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-600 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="font-bold text-slate-900">PalkkaPro</div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/about"
+              className="inline-flex h-9 items-center justify-center rounded-md px-3 text-xs font-bold text-slate-500 transition hover:bg-slate-50 hover:text-teal-700"
+            >
+              {t.nav.about}
+            </Link>
+            <Link
+              href="/privacy"
+              className="inline-flex h-9 items-center justify-center rounded-md px-3 text-xs font-bold text-teal-700"
+            >
+              {t.nav.privacy}
+            </Link>
+            <Link
+              href="/terms"
+              className="inline-flex h-9 items-center justify-center rounded-md px-3 text-xs font-bold text-slate-500 transition hover:bg-slate-50 hover:text-teal-700"
+            >
+              {t.nav.terms}
+            </Link>
+          </div>
+        </footer>
       </div>
     </main>
   );

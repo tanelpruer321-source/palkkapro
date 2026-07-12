@@ -2,11 +2,12 @@
 
 import {
   BarChart3,
+  CalendarDays,
   Calculator,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Lock,
+  Download,
   Mail,
   Pencil,
   Plus,
@@ -16,6 +17,13 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  EVENING_BONUS,
+  NIGHT_BONUS,
+  getShiftCalculatedHours,
+  parseInputNumber,
+  type WorkShift,
+} from "@/lib/earnings";
 
 type Language = "et" | "en" | "fi";
 type AppView = "calculator" | "planner";
@@ -30,30 +38,6 @@ type Field = {
   suffix: string;
   step?: string;
 };
-
-type WorkShift = {
-  id: string;
-  date: string;
-  startTime?: string;
-  endTime?: string;
-  breakMinutes?: string;
-  normalHours: string;
-  eveningHours: string;
-  nightHours: string;
-  sundayHours: string;
-  overtime50Hours: string;
-  overtime100Hours: string;
-  special50Hours: string;
-  holiday100Hours: string;
-  note: string;
-};
-
-const EVENING_BONUS = 0.73;
-const NIGHT_BONUS = 1.36;
-const DAY_MINUTES = 24 * 60;
-const EVENING_START_MINUTES = 18 * 60;
-const NIGHT_START_MINUTES = 23 * 60;
-const NIGHT_END_MINUTES = 6 * 60;
 
 const languageOptions: { code: Language; label: string }[] = [
   { code: "fi", label: "FI" },
@@ -119,15 +103,6 @@ function getCurrentMonth() {
   return new Date().toISOString().slice(0, 7);
 }
 
-function addMonths(monthKey: string, change: number) {
-  const [year, month] = monthKey.split("-").map(Number);
-  const nextDate = new Date(year, month - 1 + change, 1);
-
-  return `${nextDate.getFullYear()}-${(nextDate.getMonth() + 1)
-    .toString()
-    .padStart(2, "0")}`;
-}
-
 function createEmptyShift(date = new Date().toISOString().slice(0, 10)): WorkShift {
   return {
     id: "",
@@ -153,8 +128,7 @@ const copy = {
     languageLabel: "Keel",
     brand: "PalkkaPro",
     betaLabel: "Beta V1",
-    intro:
-      "Lihtne palgakalkulaator Soomes töötavale koristajale ja koristusala töötajale.",
+    intro: "Palgakalkulaator Soome koristusala töötajale.",
     hoursBadge: "Tunnid",
     formTitle: "Sisesta andmed",
     formHelp: "Kõik väljad on muudetavad.",
@@ -189,7 +163,9 @@ const copy = {
     feedbackText: "Tagasiside ja parandused on oodatud.",
     feedbackButton: "Saada tagasisidet",
     feedbackSubject: "PalkkaPro tagasiside",
+    aboutLink: "Meist",
     privacyLink: "Privaatsus",
+    termsLink: "Kasutustingimused",
     storageNoticeTitle: "Privaatsusseaded",
     storageNoticeText:
       "PalkkaPro saab kasutada brauseri salvestust, et mäletada sinu keelt, palgaseadeid ja kalendrisse lisatud tööpäevi. Kui keeldud, töötab kalkulaator edasi, aga andmeid ei salvestata.",
@@ -219,6 +195,10 @@ const copy = {
     sundayShort: "Pühapäev",
     reportButton: "Vaata raportit",
     reportTitle: "Tasu raport",
+    downloadReport: "Laadi CSV alla",
+    downloadPdf: "Laadi PDF alla",
+    reportSummary: "Kuu ülevaade",
+    reportRowsTitle: "Perioodide jaotus",
     dailyReport: "Päevad",
     weeklyReport: "Nädalad",
     monthlyReport: "Kuu",
@@ -234,9 +214,6 @@ const copy = {
     showAll: "Näita kõiki",
     noWorkdays: "Selles kuus pole veel tööpäevi.",
     shiftSummary: "Kuu kokkuvõte",
-    earningsTrend: "Teenistuse trend",
-    lastSixMonths: "Viimased 6 kuud",
-    averageMonth: "Keskmine",
     workdays: "Tööpäevad",
     remove: "Kustuta",
     note: "Märkus",
@@ -264,8 +241,7 @@ const copy = {
     languageLabel: "Language",
     brand: "PalkkaPro",
     betaLabel: "Beta V1",
-    intro:
-      "A simple wage calculator for cleaners and cleaning industry workers in Finland.",
+    intro: "Salary calculator for Finnish cleaning work.",
     hoursBadge: "Hours",
     formTitle: "Enter details",
     formHelp: "All fields are editable.",
@@ -300,7 +276,9 @@ const copy = {
     feedbackText: "Feedback and corrections are welcome.",
     feedbackButton: "Send feedback",
     feedbackSubject: "PalkkaPro feedback",
+    aboutLink: "About",
     privacyLink: "Privacy",
+    termsLink: "Terms",
     storageNoticeTitle: "Privacy preferences",
     storageNoticeText:
       "PalkkaPro can use browser storage to remember your language, wage settings and saved calendar workdays. If you decline, the calculator still works, but your data is not saved.",
@@ -330,6 +308,10 @@ const copy = {
     sundayShort: "Sunday",
     reportButton: "View report",
     reportTitle: "Pay report",
+    downloadReport: "Download CSV",
+    downloadPdf: "Download PDF",
+    reportSummary: "Monthly overview",
+    reportRowsTitle: "Period breakdown",
     dailyReport: "Days",
     weeklyReport: "Weeks",
     monthlyReport: "Month",
@@ -345,9 +327,6 @@ const copy = {
     showAll: "Show all",
     noWorkdays: "No workdays added for this month yet.",
     shiftSummary: "Monthly summary",
-    earningsTrend: "Earnings trend",
-    lastSixMonths: "Last 6 months",
-    averageMonth: "Average",
     workdays: "Workdays",
     remove: "Remove",
     note: "Note",
@@ -375,8 +354,7 @@ const copy = {
     languageLabel: "Kieli",
     brand: "PalkkaPro",
     betaLabel: "Beta V1",
-    intro:
-      "Yksinkertainen palkkalaskuri Suomessa työskentelevälle siivoojalle ja siivousalan työntekijälle.",
+    intro: "Palkkalaskuri Suomen siivousalalle.",
     hoursBadge: "Tunnit",
     formTitle: "Syötä tiedot",
     formHelp: "Kaikkia kenttiä voi muuttaa.",
@@ -411,7 +389,9 @@ const copy = {
     feedbackText: "Palaute ja korjaukset ovat tervetulleita.",
     feedbackButton: "Lähetä palautetta",
     feedbackSubject: "PalkkaPro palaute",
+    aboutLink: "Tietoa",
     privacyLink: "Tietosuoja",
+    termsLink: "Käyttöehdot",
     storageNoticeTitle: "Tietosuoja-asetukset",
     storageNoticeText:
       "PalkkaPro voi käyttää selaimen tallennustilaa muistaakseen kielen, palkka-asetukset ja kalenteriin tallennetut työpäivät. Jos kieltäydyt, laskuri toimii edelleen, mutta tietoja ei tallenneta.",
@@ -441,6 +421,10 @@ const copy = {
     sundayShort: "Sunnuntai",
     reportButton: "Näytä raportti",
     reportTitle: "Palkkaraportti",
+    downloadReport: "Lataa CSV",
+    downloadPdf: "Lataa PDF",
+    reportSummary: "Kuukauden yleiskuva",
+    reportRowsTitle: "Jaksojen erittely",
     dailyReport: "Päivät",
     weeklyReport: "Viikot",
     monthlyReport: "Kuukausi",
@@ -456,9 +440,6 @@ const copy = {
     showAll: "Näytä kaikki",
     noWorkdays: "Tälle kuukaudelle ei ole vielä lisätty työpäiviä.",
     shiftSummary: "Kuukauden yhteenveto",
-    earningsTrend: "Ansioiden kehitys",
-    lastSixMonths: "Viimeiset 6 kuukautta",
-    averageMonth: "Keskiarvo",
     workdays: "Työpäivät",
     remove: "Poista",
     note: "Muistiinpano",
@@ -482,176 +463,6 @@ const copy = {
     },
   },
 } satisfies Record<Language, Record<string, unknown>>;
-
-function parseInputNumber(value: string) {
-  const normalized = value.trim().replace(",", ".");
-  if (normalized === "" || normalized === "." || normalized === "-") {
-    return 0;
-  }
-
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function roundHours(minutes: number) {
-  return Math.round((minutes / 60) * 100) / 100;
-}
-
-function parseTimeToMinutes(time?: string) {
-  if (!time || !time.includes(":")) {
-    return null;
-  }
-
-  const [hoursValue, minutesValue] = time.split(":").map(Number);
-
-  if (
-    !Number.isFinite(hoursValue) ||
-    !Number.isFinite(minutesValue) ||
-    hoursValue < 0 ||
-    hoursValue > 23 ||
-    minutesValue < 0 ||
-    minutesValue > 59
-  ) {
-    return null;
-  }
-
-  return hoursValue * 60 + minutesValue;
-}
-
-function getShiftCalculatedHours(shift: WorkShift) {
-  const startMinutes = parseTimeToMinutes(shift.startTime);
-  const endMinutes = parseTimeToMinutes(shift.endTime);
-
-  if (startMinutes === null || endMinutes === null) {
-    return {
-      normalHours: parseInputNumber(shift.normalHours),
-      eveningHours: parseInputNumber(shift.eveningHours),
-      nightHours: parseInputNumber(shift.nightHours),
-      sundayHours: parseInputNumber(shift.sundayHours),
-      overtime50Hours: parseInputNumber(shift.overtime50Hours),
-      overtime100Hours: parseInputNumber(shift.overtime100Hours),
-      special50Hours: parseInputNumber(shift.special50Hours),
-      holiday100Hours: parseInputNumber(shift.holiday100Hours),
-    };
-  }
-
-  const endWithOvernight = endMinutes <= startMinutes ? endMinutes + DAY_MINUTES : endMinutes;
-  const rawWorkedMinutes = Math.max(0, endWithOvernight - startMinutes);
-  const breakMinutes = Math.min(
-    rawWorkedMinutes,
-    Math.max(0, parseInputNumber(shift.breakMinutes ?? "0")),
-  );
-  const workedMinutes = rawWorkedMinutes - breakMinutes;
-  const minutesByType = {
-    normal: 0,
-    evening: 0,
-    night: 0,
-  };
-
-  for (let minute = startMinutes; minute < endWithOvernight; minute += 1) {
-    const minuteOfDay = minute % DAY_MINUTES;
-
-    if (minuteOfDay < NIGHT_END_MINUTES || minuteOfDay >= NIGHT_START_MINUTES) {
-      minutesByType.night += 1;
-    } else if (minuteOfDay >= EVENING_START_MINUTES) {
-      minutesByType.evening += 1;
-    } else {
-      minutesByType.normal += 1;
-    }
-  }
-
-  let remainingBreak = breakMinutes;
-  const subtractBreak = (key: keyof typeof minutesByType) => {
-    const removed = Math.min(minutesByType[key], remainingBreak);
-    minutesByType[key] -= removed;
-    remainingBreak -= removed;
-  };
-
-  subtractBreak("normal");
-  subtractBreak("evening");
-  subtractBreak("night");
-
-  const isSunday = new Date(`${shift.date}T12:00:00`).getDay() === 0;
-
-  return {
-    normalHours: roundHours(workedMinutes),
-    eveningHours: roundHours(minutesByType.evening),
-    nightHours: roundHours(minutesByType.night),
-    sundayHours: isSunday ? roundHours(workedMinutes) : 0,
-    overtime50Hours: parseInputNumber(shift.overtime50Hours),
-    overtime100Hours: parseInputNumber(shift.overtime100Hours),
-    special50Hours: parseInputNumber(shift.special50Hours),
-    holiday100Hours: parseInputNumber(shift.holiday100Hours),
-  };
-}
-
-function calculateShiftPay(
-  shifts: WorkShift[],
-  hourlyWage: number,
-  totalDeductionsPercent: number,
-) {
-  const hours = shifts.reduce(
-    (sum, shift) => {
-      const shiftHours = getShiftCalculatedHours(shift);
-
-      return {
-        normalHours: sum.normalHours + shiftHours.normalHours,
-        eveningHours: sum.eveningHours + shiftHours.eveningHours,
-        nightHours: sum.nightHours + shiftHours.nightHours,
-        sundayHours: sum.sundayHours + shiftHours.sundayHours,
-        overtime50Hours: sum.overtime50Hours + shiftHours.overtime50Hours,
-        overtime100Hours: sum.overtime100Hours + shiftHours.overtime100Hours,
-        special50Hours: sum.special50Hours + shiftHours.special50Hours,
-        holiday100Hours: sum.holiday100Hours + shiftHours.holiday100Hours,
-      };
-    },
-    {
-      normalHours: 0,
-      eveningHours: 0,
-      nightHours: 0,
-      sundayHours: 0,
-      overtime50Hours: 0,
-      overtime100Hours: 0,
-      special50Hours: 0,
-      holiday100Hours: 0,
-    },
-  );
-
-  const basePay = hourlyWage * hours.normalHours;
-  const eveningBonusTotal = hours.eveningHours * EVENING_BONUS;
-  const nightBonusTotal = hours.nightHours * NIGHT_BONUS;
-  const sundayBonus = hourlyWage * hours.sundayHours;
-  const holidayBonus100 = hourlyWage * hours.holiday100Hours;
-  const specialBonus50 = hourlyWage * 0.5 * hours.special50Hours;
-  const overtimePay =
-    hours.overtime50Hours * hourlyWage * 1.5 +
-    hours.overtime100Hours * hourlyWage * 2;
-  const grossPay =
-    basePay +
-    eveningBonusTotal +
-    nightBonusTotal +
-    sundayBonus +
-    holidayBonus100 +
-    specialBonus50 +
-    overtimePay;
-  const estimatedNetPay = grossPay * (1 - totalDeductionsPercent / 100);
-  const totalHours =
-    hours.normalHours + hours.overtime50Hours + hours.overtime100Hours;
-
-  return {
-    ...hours,
-    basePay,
-    eveningBonusTotal,
-    estimatedNetPay,
-    grossPay,
-    holidayBonus100,
-    nightBonusTotal,
-    overtimePay,
-    specialBonus50,
-    sundayBonus,
-    totalHours,
-  };
-}
 
 function getCalendarDays(month: string) {
   const [year, monthIndex] = month.split("-").map(Number);
@@ -737,31 +548,33 @@ export default function Home() {
   const [isAllShiftsModalOpen, setIsAllShiftsModalOpen] = useState(false);
   const [storageConsent, setStorageConsent] =
     useState<StorageConsent>("checking");
-  const [activeView, setActiveView] = useState<AppView>("calculator");
+  const [activeView, setActiveView] = useState<AppView>("planner");
   const [reportMode, setReportMode] = useState<ReportMode>("daily");
   const hasLoadedCalculatorValues = useRef(false);
   const hasLoadedShifts = useRef(false);
 
   useEffect(() => {
-    const savedConsent = window.localStorage.getItem(STORAGE_NOTICE_KEY);
+    window.setTimeout(() => {
+      const savedConsent = window.localStorage.getItem(STORAGE_NOTICE_KEY);
 
-    if (savedConsent === "accepted" || savedConsent === "true") {
-      const savedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+      if (savedConsent === "accepted" || savedConsent === "true") {
+        const savedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
 
-      if (
-        savedLanguage === "et" ||
-        savedLanguage === "fi" ||
-        savedLanguage === "en"
-      ) {
-        setLanguage(savedLanguage);
+        if (
+          savedLanguage === "et" ||
+          savedLanguage === "fi" ||
+          savedLanguage === "en"
+        ) {
+          setLanguage(savedLanguage);
+        }
+
+        setStorageConsent("accepted");
+      } else if (savedConsent === "declined") {
+        setStorageConsent("declined");
+      } else {
+        setStorageConsent("pending");
       }
-
-      setStorageConsent("accepted");
-    } else if (savedConsent === "declined") {
-      setStorageConsent("declined");
-    } else {
-      setStorageConsent("pending");
-    }
+    }, 0);
   }, []);
 
   useEffect(() => {
@@ -871,7 +684,9 @@ export default function Home() {
 
   useEffect(() => {
     const hasOpenModal =
-      isShiftModalOpen || isAllShiftsModalOpen || isReportModalOpen;
+      isShiftModalOpen ||
+      isAllShiftsModalOpen ||
+      isReportModalOpen;
 
     if (!hasOpenModal) {
       return;
@@ -892,7 +707,11 @@ export default function Home() {
       document.body.style.overflow = previousOverflow;
       document.body.style.paddingRight = previousPaddingRight;
     };
-  }, [isAllShiftsModalOpen, isReportModalOpen, isShiftModalOpen]);
+  }, [
+    isAllShiftsModalOpen,
+    isReportModalOpen,
+    isShiftModalOpen,
+  ]);
 
   const totals = useMemo(() => {
     const hourlyWageNumber = parseInputNumber(hourlyWage);
@@ -1099,55 +918,13 @@ export default function Home() {
     [filteredShifts],
   );
 
-  const earningsTrend = useMemo(() => {
+  const reportRows = useMemo(() => {
     const hourlyWageNumber = parseInputNumber(hourlyWage);
     const totalDeductionsPercent =
       parseInputNumber(taxPercentage) +
       parseInputNumber(pensionPercentage) +
       parseInputNumber(unemploymentPercentage) +
       parseInputNumber(otherDeductionsPercentage);
-    const months = Array.from({ length: 6 }, (_, index) =>
-      addMonths(selectedMonth, index - 5),
-    );
-
-    const rows = months.map((month) => {
-      const shifts = workShifts.filter((shift) => shift.date.startsWith(month));
-      const pay = calculateShiftPay(
-        shifts,
-        hourlyWageNumber,
-        totalDeductionsPercent,
-      );
-
-      return {
-        month,
-        ...pay,
-      };
-    });
-    const maxGrossPay = Math.max(...rows.map((row) => row.grossPay), 1);
-    const totalGrossPay = rows.reduce((sum, row) => sum + row.grossPay, 0);
-    const totalNetPay = rows.reduce((sum, row) => sum + row.estimatedNetPay, 0);
-    const totalHours = rows.reduce((sum, row) => sum + row.totalHours, 0);
-
-    return {
-      averageGrossPay: totalGrossPay / rows.length,
-      maxGrossPay,
-      rows,
-      totalGrossPay,
-      totalHours,
-      totalNetPay,
-    };
-  }, [
-    hourlyWage,
-    otherDeductionsPercentage,
-    pensionPercentage,
-    selectedMonth,
-    taxPercentage,
-    unemploymentPercentage,
-    workShifts,
-  ]);
-
-  const reportRows = useMemo(() => {
-    const hourlyWageNumber = parseInputNumber(hourlyWage);
     const buildReportRow = (label: string, shifts: WorkShift[]) => {
       const hours = shifts.reduce(
         (sum, shift) => {
@@ -1185,19 +962,22 @@ export default function Home() {
       const overtimePay =
         hours.overtime50Hours * hourlyWageNumber * 1.5 +
         hours.overtime100Hours * hourlyWageNumber * 2;
+      const grossPay =
+        basePay +
+        eveningBonusTotal +
+        nightBonusTotal +
+        sundayBonus +
+        holidayBonus100 +
+        specialBonus50 +
+        overtimePay;
+      const estimatedNetPay = grossPay * (1 - totalDeductionsPercent / 100);
 
       return {
         ...hours,
         basePay,
         eveningBonusTotal,
-        grossPay:
-          basePay +
-          eveningBonusTotal +
-          nightBonusTotal +
-          sundayBonus +
-          holidayBonus100 +
-          specialBonus50 +
-          overtimePay,
+        estimatedNetPay,
+        grossPay,
         holidayBonus100,
         label,
         nightBonusTotal,
@@ -1231,7 +1011,348 @@ export default function Home() {
     return Object.entries(shiftsByWeek).map(([week, shifts]) =>
       buildReportRow(week, shifts),
     );
-  }, [filteredShifts, hourlyWage, reportMode, selectedMonth, shiftsByDate]);
+  }, [
+    filteredShifts,
+    hourlyWage,
+    otherDeductionsPercentage,
+    pensionPercentage,
+    reportMode,
+    selectedMonth,
+    shiftsByDate,
+    taxPercentage,
+    unemploymentPercentage,
+  ]);
+
+  function downloadReportCsv() {
+    const formatCsvNumber = (value: number) =>
+      value.toFixed(2).replace(".", ",");
+    const escapeCsvCell = (value: string | number) => {
+      const text = String(value).replaceAll('"', '""');
+      return `"${text}"`;
+    };
+    const rows = [
+      ["PalkkaPro", t.reportTitle as string],
+      [t.selectedMonth as string, selectedMonth],
+      [],
+      [t.reportSummary as string],
+      [t.workdays as string, filteredShifts.length],
+      [t.hoursBadge as string, formatCsvNumber(shiftTotals.totalHours)],
+      [t.grossPay as string, formatCsvNumber(shiftTotals.grossPay)],
+      [t.netPay as string, formatCsvNumber(shiftTotals.estimatedNetPay)],
+      [
+        t.deductions as string,
+        formatCsvNumber(shiftTotals.grossPay - shiftTotals.estimatedNetPay),
+      ],
+      [],
+      [t.bonusSummary as string],
+      [t.period as string, t.hours as string, t.amount as string],
+      [
+        t.eveningBonus as string,
+        formatCsvNumber(shiftTotals.eveningHours),
+        formatCsvNumber(shiftTotals.eveningBonusTotal),
+      ],
+      [
+        t.nightBonus as string,
+        formatCsvNumber(shiftTotals.nightHours),
+        formatCsvNumber(shiftTotals.nightBonusTotal),
+      ],
+      [
+        t.sundayBonus as string,
+        formatCsvNumber(shiftTotals.sundayHours),
+        formatCsvNumber(shiftTotals.sundayBonus),
+      ],
+      [
+        t.specialBonus as string,
+        formatCsvNumber(shiftTotals.special50Hours),
+        formatCsvNumber(shiftTotals.specialBonus50),
+      ],
+      [
+        t.holidayBonus as string,
+        formatCsvNumber(shiftTotals.holiday100Hours),
+        formatCsvNumber(shiftTotals.holidayBonus100),
+      ],
+      [
+        t.overtimePay as string,
+        formatCsvNumber(
+          shiftTotals.overtime50Hours + shiftTotals.overtime100Hours,
+        ),
+        formatCsvNumber(shiftTotals.overtimePay),
+      ],
+      [],
+      [t.reportRowsTitle as string],
+      [
+        t.period as string,
+        t.hours as string,
+        t.grossPay as string,
+        t.netPay as string,
+        t.eveningShort as string,
+        t.nightShort as string,
+        t.sundayShort as string,
+      ],
+      ...reportRows.map((row) => [
+        row.label,
+        formatCsvNumber(row.normalHours),
+        formatCsvNumber(row.grossPay),
+        formatCsvNumber(row.estimatedNetPay),
+        formatCsvNumber(row.eveningBonusTotal),
+        formatCsvNumber(row.nightBonusTotal),
+        formatCsvNumber(row.sundayBonus),
+      ]),
+    ];
+    const csv = rows
+      .map((row) => row.map(escapeCsvCell).join(";"))
+      .join("\n");
+    const blob = new Blob([`\uFEFF${csv}`], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `palkkapro-report-${selectedMonth}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadReportPdf() {
+    const escapeHtml = (value: string | number) =>
+      String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    const summaryRows = [
+      [t.workdays as string, filteredShifts.length],
+      [t.hoursBadge as string, `${shiftTotals.totalHours} h`],
+      [t.grossPay as string, money.format(shiftTotals.grossPay)],
+      [t.netPay as string, money.format(shiftTotals.estimatedNetPay)],
+      [
+        t.deductions as string,
+        money.format(shiftTotals.grossPay - shiftTotals.estimatedNetPay),
+      ],
+    ];
+    const bonusRows = [
+      [
+        t.eveningBonus as string,
+        `${shiftTotals.eveningHours} h`,
+        money.format(shiftTotals.eveningBonusTotal),
+      ],
+      [
+        t.nightBonus as string,
+        `${shiftTotals.nightHours} h`,
+        money.format(shiftTotals.nightBonusTotal),
+      ],
+      [
+        t.sundayBonus as string,
+        `${shiftTotals.sundayHours} h`,
+        money.format(shiftTotals.sundayBonus),
+      ],
+      [
+        t.specialBonus as string,
+        `${shiftTotals.special50Hours} h`,
+        money.format(shiftTotals.specialBonus50),
+      ],
+      [
+        t.holidayBonus as string,
+        `${shiftTotals.holiday100Hours} h`,
+        money.format(shiftTotals.holidayBonus100),
+      ],
+      [
+        t.overtimePay as string,
+        `${shiftTotals.overtime50Hours + shiftTotals.overtime100Hours} h`,
+        money.format(shiftTotals.overtimePay),
+      ],
+    ];
+    const reportTableRows =
+      reportRows.length > 0
+        ? reportRows
+            .map(
+              (row) => `
+                <tr>
+                  <td>${escapeHtml(row.label)}</td>
+                  <td class="right">${escapeHtml(`${row.normalHours} h`)}</td>
+                  <td class="right">${escapeHtml(money.format(row.grossPay))}</td>
+                  <td class="right strong">${escapeHtml(
+                    money.format(row.estimatedNetPay),
+                  )}</td>
+                </tr>
+              `,
+            )
+            .join("")
+        : `<tr><td colspan="4">${escapeHtml(t.noReportRows as string)}</td></tr>`;
+    const html = `
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>PalkkaPro ${escapeHtml(selectedMonth)}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body {
+              margin: 0;
+              background: #f8fafc;
+              color: #0f172a;
+              font-family: Arial, sans-serif;
+              padding: 32px;
+            }
+            .page {
+              max-width: 820px;
+              margin: 0 auto;
+              background: white;
+              border: 1px solid #e2e8f0;
+              border-radius: 14px;
+              padding: 28px;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              gap: 24px;
+              border-bottom: 1px solid #e2e8f0;
+              padding-bottom: 18px;
+            }
+            .brand {
+              font-size: 24px;
+              font-weight: 900;
+              letter-spacing: 0;
+            }
+            .muted { color: #64748b; font-size: 13px; }
+            h1 { font-size: 20px; margin: 4px 0 0; }
+            h2 { font-size: 14px; margin: 24px 0 10px; }
+            .summary {
+              display: grid;
+              grid-template-columns: repeat(5, 1fr);
+              gap: 10px;
+              margin-top: 18px;
+            }
+            .stat {
+              background: #f8fafc;
+              border: 1px solid #e2e8f0;
+              border-radius: 10px;
+              padding: 10px;
+            }
+            .stat-label {
+              color: #64748b;
+              font-size: 11px;
+              font-weight: 700;
+            }
+            .stat-value {
+              font-size: 15px;
+              font-weight: 800;
+              margin-top: 5px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              border: 1px solid #e2e8f0;
+              border-radius: 10px;
+              overflow: hidden;
+              font-size: 12px;
+            }
+            th {
+              background: #f8fafc;
+              color: #64748b;
+              font-size: 10px;
+              text-transform: uppercase;
+              text-align: left;
+            }
+            th, td {
+              border-bottom: 1px solid #e2e8f0;
+              padding: 9px 10px;
+            }
+            tr:last-child td { border-bottom: 0; }
+            .right { text-align: right; }
+            .strong { color: #0f766e; font-weight: 800; }
+            .footer {
+              margin-top: 22px;
+              color: #64748b;
+              font-size: 11px;
+              line-height: 1.5;
+            }
+            @media print {
+              body { background: white; padding: 0; }
+              .page { border: 0; border-radius: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <main class="page">
+            <div class="header">
+              <div>
+                <div class="brand">PalkkaPro</div>
+                <h1>${escapeHtml(t.reportTitle as string)}</h1>
+              </div>
+              <div class="muted">${escapeHtml(selectedMonth)}</div>
+            </div>
+            <section class="summary">
+              ${summaryRows
+                .map(
+                  ([label, value]) => `
+                    <div class="stat">
+                      <div class="stat-label">${escapeHtml(label)}</div>
+                      <div class="stat-value">${escapeHtml(value)}</div>
+                    </div>
+                  `,
+                )
+                .join("")}
+            </section>
+            <h2>${escapeHtml(t.bonusSummary as string)}</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>${escapeHtml(t.period as string)}</th>
+                  <th class="right">${escapeHtml(t.hours as string)}</th>
+                  <th class="right">${escapeHtml(t.amount as string)}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${bonusRows
+                  .map(
+                    ([label, hours, amount]) => `
+                      <tr>
+                        <td>${escapeHtml(label)}</td>
+                        <td class="right">${escapeHtml(hours)}</td>
+                        <td class="right strong">${escapeHtml(amount)}</td>
+                      </tr>
+                    `,
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+            <h2>${escapeHtml(t.reportRowsTitle as string)}</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>${escapeHtml(t.period as string)}</th>
+                  <th class="right">${escapeHtml(t.hours as string)}</th>
+                  <th class="right">${escapeHtml(t.grossPayShort as string)}</th>
+                  <th class="right">${escapeHtml(t.netPayShort as string)}</th>
+                </tr>
+              </thead>
+              <tbody>${reportTableRows}</tbody>
+            </table>
+            <p class="footer">${escapeHtml(t.disclaimer as string)}</p>
+          </main>
+          <script>
+            window.addEventListener("load", () => {
+              window.print();
+            });
+          </script>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const reportWindow = window.open(url, "_blank");
+
+    if (reportWindow) {
+      window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } else {
+      URL.revokeObjectURL(url);
+    }
+  }
 
   const fieldText = t.fields as unknown as Record<string, [string, string]>;
 
@@ -1489,8 +1610,9 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5 lg:gap-5 lg:px-8">
-        <header className="relative rounded-lg border border-slate-200 bg-white p-4 pr-20 shadow-sm lg:p-5 lg:pr-20">
-            <label className="absolute right-3 top-3 lg:right-4 lg:top-4">
+        <header className="relative rounded-lg border border-slate-200 bg-white p-4 pr-20 shadow-sm lg:p-5 lg:pr-24">
+          <div className="absolute right-3 top-3 flex items-center gap-2 lg:right-4 lg:top-4">
+            <label>
               <span className="sr-only">{t.languageLabel as string}</span>
               <select
                 value={language}
@@ -1505,6 +1627,7 @@ export default function Home() {
                 ))}
               </select>
             </label>
+          </div>
 
             <div className="max-w-3xl">
               <div className="flex flex-wrap items-center gap-3">
@@ -1536,12 +1659,12 @@ export default function Home() {
             className="inline-flex w-full rounded-lg border border-slate-200 bg-white p-1 shadow-sm sm:w-fit"
             aria-label="PalkkaPro tools"
           >
-            {(["calculator", "planner"] as AppView[]).map((view) => (
+            {(["planner", "calculator"] as AppView[]).map((view) => (
               <button
                 key={view}
                 type="button"
                 onClick={() => setActiveView(view)}
-                className={`group relative h-10 min-w-0 flex-1 rounded-md px-2 text-[13px] font-bold transition sm:flex-none sm:px-4 sm:text-sm ${
+                className={`group relative h-10 min-w-0 flex-1 rounded-md px-1.5 text-[12px] font-bold transition sm:flex-none sm:px-4 sm:text-sm ${
                   activeView === view
                     ? "bg-slate-950 text-white shadow-sm"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
@@ -1550,12 +1673,12 @@ export default function Home() {
                 {view === "calculator" ? (
                   <span className="inline-flex items-center justify-center gap-1.5">
                     <Calculator size={14} aria-hidden="true" />
-                    <span>{t.calculatorTab as string}</span>
+                    <span className="truncate">{t.calculatorTab as string}</span>
                   </span>
                 ) : (
                   <span className="inline-flex items-center justify-center gap-1.5">
-                    <Lock size={13} aria-hidden="true" />
-                    <span>{t.plannerTab as string}</span>
+                    <CalendarDays size={14} aria-hidden="true" />
+                    <span className="truncate">{t.plannerTab as string}</span>
                   </span>
                 )}
               </button>
@@ -1888,7 +2011,7 @@ export default function Home() {
                       </span>
                       {dayShifts.length > 0 ? (
                         <span className="mt-auto block rounded bg-teal-50 px-1 py-0.5 text-center text-[9px] font-bold leading-4 text-teal-700 sm:mt-2 sm:px-1.5 sm:py-1 sm:text-left sm:text-[11px]">
-                          {dayShifts.length} / {roundHours(dayHours * 60)} h
+                          {dayShifts.length} / {Math.round(dayHours * 100) / 100} h
                         </span>
                       ) : null}
                     </button>
@@ -1900,99 +2023,46 @@ export default function Home() {
             </section>
 
             <div className="space-y-3">
-              <section className="rounded-lg border border-slate-200 bg-white p-4">
-                <h3 className="text-sm font-bold text-slate-700">
-                  {t.shiftSummary as string}
-                </h3>
+              <section className="rounded-lg border border-slate-200 bg-slate-950 p-4 text-white shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-bold text-white">
+                    {t.shiftSummary as string}
+                  </h3>
+                  <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-300 ring-1 ring-white/10">
+                    {selectedMonth}
+                  </span>
+                </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 lg:gap-3">
                   <MiniStat
                     label={t.workdays as string}
                     value={filteredShifts.length.toString()}
+                    tone="dark"
                   />
                   <MiniStat
                     label={t.hoursBadge as string}
                     value={`${shiftTotals.totalHours} h`}
+                    tone="dark"
                   />
                   <MiniStat
                     label={t.grossPayShort as string}
                     value={money.format(shiftTotals.grossPay)}
+                    tone="dark"
                   />
                   <MiniStat
                     label={t.netPayShort as string}
                     value={money.format(shiftTotals.estimatedNetPay)}
+                    tone="dark"
+                    highlight
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsReportModalOpen(true)}
-                  className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-700 transition hover:border-teal-300 hover:bg-white hover:text-teal-700"
+                  className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-white/10 px-3 text-xs font-bold text-white transition hover:bg-white/15"
                 >
                   <BarChart3 size={14} />
                   {t.reportButton as string}
                 </button>
-              </section>
-
-              <section className="rounded-lg border border-slate-200 bg-white p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-700">
-                      {t.earningsTrend as string}
-                    </h3>
-                    <p className="mt-0.5 text-xs font-medium text-slate-400">
-                      {t.lastSixMonths as string}
-                    </p>
-                  </div>
-                  <span className="rounded-md border border-teal-200 bg-teal-50 px-2 py-0.5 text-[10px] font-bold uppercase text-teal-700">
-                    {t.premiumPreview as string}
-                  </span>
-                </div>
-
-                <div className="mt-4 flex h-36 items-end gap-2 border-b border-slate-100 pb-2">
-                  {earningsTrend.rows.map((row) => {
-                    const barHeight = Math.max(
-                      6,
-                      Math.round((row.grossPay / earningsTrend.maxGrossPay) * 100),
-                    );
-
-                    return (
-                      <div
-                        key={row.month}
-                        className="flex min-w-0 flex-1 flex-col items-center gap-2"
-                      >
-                        <div className="flex h-24 w-full items-end">
-                          <div
-                            className="w-full rounded-t bg-teal-500 transition"
-                            style={{ height: `${barHeight}%` }}
-                            aria-label={`${row.month}: ${money.format(
-                              row.grossPay,
-                            )}`}
-                          />
-                        </div>
-                        <span className="truncate text-[10px] font-bold text-slate-400">
-                          {row.month.slice(5)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="mt-3 grid grid-cols-[0.98fr_1.06fr_0.96fr] gap-2">
-                  <MiniStat
-                    label={t.grossPayShort as string}
-                    value={money.format(earningsTrend.totalGrossPay)}
-                  />
-                  <MiniStat
-                    label={t.netPayShort as string}
-                    value={money.format(earningsTrend.totalNetPay)}
-                  />
-                  <MiniStat
-                    label={t.averageMonth as string}
-                    value={money.format(earningsTrend.averageGrossPay)}
-                  />
-                </div>
-                <p className="mt-2 text-xs font-medium text-slate-400">
-                  {earningsTrend.totalHours} h
-                </p>
               </section>
 
               <section className="rounded-lg border border-slate-200 bg-white p-4">
@@ -2238,11 +2308,45 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setIsReportModalOpen(false)}
-                  className="h-9 rounded-md border border-slate-200 px-3 text-xs font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                  className="h-9 shrink-0 rounded-md border border-slate-200 px-3 text-xs font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
                 >
                   {t.close as string}
                 </button>
               </div>
+
+              <section className="mt-4 rounded-lg border border-slate-200 bg-slate-950 p-4 text-white">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-bold">
+                    {t.reportSummary as string}
+                  </h3>
+                  <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-300 ring-1 ring-white/10">
+                    {selectedMonth}
+                  </span>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <MiniStat
+                    label={t.workdays as string}
+                    value={filteredShifts.length.toString()}
+                    tone="dark"
+                  />
+                  <MiniStat
+                    label={t.hoursBadge as string}
+                    value={`${shiftTotals.totalHours} h`}
+                    tone="dark"
+                  />
+                  <MiniStat
+                    label={t.grossPayShort as string}
+                    value={money.format(shiftTotals.grossPay)}
+                    tone="dark"
+                  />
+                  <MiniStat
+                    label={t.netPayShort as string}
+                    value={money.format(shiftTotals.estimatedNetPay)}
+                    tone="dark"
+                    highlight
+                  />
+                </div>
+              </section>
 
               <section className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <h3 className="text-sm font-bold text-slate-700">
@@ -2284,34 +2388,40 @@ export default function Home() {
                 </div>
               </section>
 
-              <div className="mt-4 inline-flex rounded-md border border-slate-200 bg-slate-50 p-1">
-                {(["daily", "weekly", "monthly"] as ReportMode[]).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => setReportMode(mode)}
-                    className={`h-8 rounded px-3 text-xs font-bold transition ${
-                      reportMode === mode
-                        ? "bg-white text-teal-700 shadow-sm"
-                        : "text-slate-500 hover:text-slate-800"
-                    }`}
-                  >
-                    {
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="text-sm font-bold text-slate-700">
+                  {t.reportRowsTitle as string}
+                </h3>
+                <div className="inline-flex w-fit rounded-md border border-slate-200 bg-slate-50 p-1">
+                  {(["daily", "weekly", "monthly"] as ReportMode[]).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setReportMode(mode)}
+                      className={`h-8 rounded px-3 text-xs font-bold transition ${
+                        reportMode === mode
+                          ? "bg-white text-teal-700 shadow-sm"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
                       {
-                        daily: t.dailyReport as string,
-                        weekly: t.weeklyReport as string,
-                        monthly: t.monthlyReport as string,
-                      }[mode]
-                    }
-                  </button>
-                ))}
+                        {
+                          daily: t.dailyReport as string,
+                          weekly: t.weeklyReport as string,
+                          monthly: t.monthlyReport as string,
+                        }[mode]
+                      }
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="mt-3 overflow-hidden rounded-lg border border-slate-200">
-                <div className="grid grid-cols-[1.15fr_0.7fr_0.85fr] bg-slate-50 px-3 py-2 text-[11px] font-bold uppercase text-slate-500">
+                <div className="grid grid-cols-[1.1fr_0.65fr_0.85fr_0.85fr] bg-slate-50 px-3 py-2 text-[11px] font-bold uppercase text-slate-500">
                   <span>{t.period as string}</span>
                   <span className="text-right">{t.hours as string}</span>
-                  <span className="text-right">{t.amount as string}</span>
+                  <span className="text-right">{t.grossPayShort as string}</span>
+                  <span className="text-right">{t.netPayShort as string}</span>
                 </div>
                 {reportRows.length === 0 ? (
                   <p className="px-3 py-4 text-sm text-slate-500">
@@ -2322,7 +2432,7 @@ export default function Home() {
                     {reportRows.map((row) => (
                       <div
                         key={row.label}
-                        className="grid grid-cols-[1.15fr_0.7fr_0.85fr] px-3 py-2 text-sm"
+                        className="grid grid-cols-[1.1fr_0.65fr_0.85fr_0.85fr] px-3 py-2 text-sm"
                       >
                         <span className="font-semibold text-slate-800">
                           {row.label}
@@ -2333,7 +2443,10 @@ export default function Home() {
                         <span className="text-right font-bold text-slate-900">
                           {money.format(row.grossPay)}
                         </span>
-                        <span className="col-span-3 mt-1 text-xs leading-5 text-slate-500">
+                        <span className="text-right font-bold text-teal-700">
+                          {money.format(row.estimatedNetPay)}
+                        </span>
+                        <span className="col-span-4 mt-1 text-xs leading-5 text-slate-500">
                           {t.eveningShort as string}: {row.eveningHours} h /{" "}
                           {money.format(row.eveningBonusTotal)} ·{" "}
                           {t.nightShort as string}: {row.nightHours} h /{" "}
@@ -2345,6 +2458,25 @@ export default function Home() {
                     ))}
                   </div>
                 )}
+              </div>
+
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={downloadReportPdf}
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-teal-300 hover:text-teal-700 sm:w-auto"
+                >
+                  <Download size={16} />
+                  {t.downloadPdf as string}
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadReportCsv}
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-slate-800 sm:w-auto"
+                >
+                  <Download size={16} />
+                  {t.downloadReport as string}
+                </button>
               </div>
             </section>
           </div>
@@ -2359,10 +2491,22 @@ export default function Home() {
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Link
+              href="/about"
+              className="inline-flex h-9 items-center justify-center rounded-md px-3 text-xs font-bold text-slate-500 transition hover:bg-slate-50 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-100"
+            >
+              {t.aboutLink as string}
+            </Link>
+            <Link
               href="/privacy"
               className="inline-flex h-9 items-center justify-center rounded-md px-3 text-xs font-bold text-slate-500 transition hover:bg-slate-50 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-100"
             >
               {t.privacyLink as string}
+            </Link>
+            <Link
+              href="/terms"
+              className="inline-flex h-9 items-center justify-center rounded-md px-3 text-xs font-bold text-slate-500 transition hover:bg-slate-50 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-100"
+            >
+              {t.termsLink as string}
             </Link>
             <a
               href={feedbackHref}
@@ -2451,13 +2595,45 @@ function PlannerInput({
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
+function MiniStat({
+  highlight,
+  label,
+  tone = "light",
+  value,
+}: {
+  highlight?: boolean;
+  label: string;
+  tone?: "light" | "dark";
+  value: string;
+}) {
+  const isDark = tone === "dark";
+
   return (
-    <div className="min-w-0 rounded-md bg-slate-50 p-2.5 sm:p-3">
-      <p className="whitespace-normal text-[10px] font-semibold leading-3 text-slate-500 sm:text-xs sm:leading-4">
+    <div
+      className={`min-w-0 rounded-md p-2.5 sm:p-3 ${
+        isDark
+          ? highlight
+            ? "bg-teal-400/15 text-white ring-1 ring-teal-300/30"
+            : "bg-white/10 text-white ring-1 ring-white/10"
+          : "bg-slate-50 text-slate-900"
+      }`}
+    >
+      <p
+        className={`whitespace-normal text-[10px] font-semibold leading-3 sm:text-xs sm:leading-4 ${
+          isDark && highlight
+            ? "text-teal-100"
+            : isDark
+              ? "text-slate-300"
+              : "text-slate-500"
+        }`}
+      >
         {label}
       </p>
-      <p className="mt-1 break-words text-[13px] font-bold leading-4 text-slate-900 sm:text-base sm:leading-5">
+      <p
+        className={`mt-1 break-words font-bold leading-4 sm:leading-5 ${
+          highlight ? "text-base sm:text-lg" : "text-[13px] sm:text-base"
+        }`}
+      >
         {value}
       </p>
     </div>
