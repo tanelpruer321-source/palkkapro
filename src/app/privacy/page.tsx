@@ -90,6 +90,7 @@ const copy: Record<Language, PrivacyCopy> = {
         body: [
           "PalkkaPro ei vaadi rekisteröitymistä, ei kysy nimeäsi eikä tallenna palkkaa tai työpäiviä käyttäjätilille.",
           "PalkkaPro ei nykyisessä laskurissa käytä mainosevästeitä tai kolmannen osapuolen markkinointiseurantaa.",
+          "PalkkaPro voi käyttää Vercel Web Analytics -palvelua sivuston kävijämäärien ja sivunäyttöjen ymmärtämiseen. Se toimii ilman kolmannen osapuolen evästeitä ja näyttää koottuja tilastoja.",
         ],
       },
       {
@@ -153,6 +154,7 @@ const copy: Record<Language, PrivacyCopy> = {
         body: [
           "PalkkaPro does not require registration, does not ask for your name and does not store your salary or workdays in a user account.",
           "PalkkaPro does not currently use advertising cookies or third-party marketing tracking inside the calculator.",
+          "PalkkaPro may use Vercel Web Analytics to understand site visits and page views. It works without third-party cookies and provides aggregated statistics.",
         ],
       },
       {
@@ -216,6 +218,7 @@ const copy: Record<Language, PrivacyCopy> = {
         body: [
           "PalkkaPro ei nõua registreerimist, ei küsi sinu nime ega salvesta palka või tööpäevi kasutajakontole.",
           "PalkkaPro ei kasuta praeguses kalkulaatoris reklaamiküpsiseid ega kolmanda osapoole turundusjälgimist.",
+          "PalkkaPro võib kasutada Vercel Web Analytics teenust, et mõista lehe külastusi ja vaatamisi. See töötab ilma kolmanda osapoole küpsisteta ning näitab koondstatistikat.",
         ],
       },
       {
