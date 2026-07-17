@@ -10,6 +10,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Language = "fi" | "en" | "et";
@@ -22,6 +23,7 @@ type Section = {
 
 type TermsCopy = {
   back: string;
+  backToAccount: string;
   languageLabel: string;
   title: string;
   subtitle: string;
@@ -68,6 +70,7 @@ const copy: Record<Language, { terms: TermsCopy }> = {
   fi: {
     terms: {
       back: "Takaisin PalkkaProhon",
+      backToAccount: "Takaisin rekisteröitymiseen",
       languageLabel: "Kieli",
       title: "Käyttöehdot",
       subtitle: "Lue nämä ehdot ennen PalkkaPron käyttöä.",
@@ -168,6 +171,7 @@ const copy: Record<Language, { terms: TermsCopy }> = {
   en: {
     terms: {
       back: "Back to PalkkaPro",
+      backToAccount: "Back to registration",
       languageLabel: "Language",
       title: "Terms of Use",
       subtitle: "Please read these terms before using PalkkaPro.",
@@ -268,6 +272,7 @@ const copy: Record<Language, { terms: TermsCopy }> = {
   et: {
     terms: {
       back: "Tagasi PalkkaPro juurde",
+      backToAccount: "Tagasi registreerimise juurde",
       languageLabel: "Keel",
       title: "Kasutustingimused",
       subtitle: "Palun loe neid tingimusi enne PalkkaPro kasutamist.",
@@ -381,9 +386,13 @@ const sectionIcons = {
 };
 
 export default function TermsPageClient() {
+  const searchParams = useSearchParams();
   const [language, setLanguage] = useState<Language>("fi");
   const [showMobilePageNav, setShowMobilePageNav] = useState(false);
   const t = copy[language].terms;
+  const isFromAccount = searchParams.get("from") === "account";
+  const backHref = isFromAccount ? "/account" : "/";
+  const backLabel = isFromAccount ? t.backToAccount : t.back;
 
   useEffect(() => {
     window.setTimeout(() => {
@@ -439,10 +448,10 @@ export default function TermsPageClient() {
         <header className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <Link
-              href="/"
+              href={backHref}
               className="text-sm font-bold text-teal-700 transition hover:text-teal-800"
             >
-              {t.back}
+              {backLabel}
             </Link>
             <label>
               <span className="sr-only">{t.languageLabel}</span>

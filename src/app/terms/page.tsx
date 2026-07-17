@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import TermsPageClient from "./TermsPageClient";
 
 export const metadata: Metadata = {
@@ -24,5 +25,9 @@ export const metadata: Metadata = {
 };
 
 export default function TermsPage() {
-  return <TermsPageClient />;
+  return (
+    <Suspense>
+      <TermsPageClient />
+    </Suspense>
+  );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import type { User } from "@supabase/supabase-js";
 import {
   BarChart3,
   CalendarDays,
@@ -13,10 +14,12 @@ import {
   Plus,
   RotateCcw,
   Trash2,
+  UserRound,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getSupabaseClient } from "@/lib/supabase";
 import {
   EVENING_BONUS,
   NIGHT_BONUS,
@@ -29,6 +32,7 @@ type Language = "et" | "en" | "fi";
 type AppView = "calculator" | "planner";
 type ReportMode = "daily" | "weekly" | "monthly";
 type StorageConsent = "checking" | "pending" | "accepted" | "declined";
+type CloudSyncStatus = "local" | "syncing" | "synced" | "error";
 
 type Field = {
   label: string;
@@ -99,6 +103,75 @@ type SavedCalculatorSettings = Pick<
   | "otherDeductionsPercentage"
 >;
 
+type CloudPaySettingsRow = {
+  hourly_wage: string;
+  tax_percentage: string;
+  pension_percentage: string;
+  unemployment_percentage: string;
+  other_deductions_percentage: string;
+  user_id: string;
+};
+
+type CloudWorkShiftRow = {
+  break_minutes: string | null;
+  date: string;
+  end_time: string | null;
+  evening_hours: string;
+  holiday_100_hours: string;
+  id: string;
+  night_hours: string;
+  normal_hours: string;
+  note: string;
+  overtime_50_hours: string;
+  overtime_100_hours: string;
+  special_50_hours: string;
+  start_time: string | null;
+  sunday_hours: string;
+  user_id: string;
+};
+
+function mapShiftToCloudRow(
+  shift: WorkShift,
+  userId: string,
+): CloudWorkShiftRow {
+  return {
+    break_minutes: shift.breakMinutes ?? null,
+    date: shift.date,
+    end_time: shift.endTime ?? null,
+    evening_hours: shift.eveningHours,
+    holiday_100_hours: shift.holiday100Hours,
+    id: shift.id,
+    night_hours: shift.nightHours,
+    normal_hours: shift.normalHours,
+    note: shift.note,
+    overtime_50_hours: shift.overtime50Hours,
+    overtime_100_hours: shift.overtime100Hours,
+    special_50_hours: shift.special50Hours,
+    start_time: shift.startTime ?? null,
+    sunday_hours: shift.sundayHours,
+    user_id: userId,
+  };
+}
+
+function mapCloudRowToShift(row: CloudWorkShiftRow): WorkShift {
+  return {
+    breakMinutes: row.break_minutes ?? "0",
+    date: row.date,
+    endTime: row.end_time ?? "",
+    eveningHours: row.evening_hours,
+    holiday100Hours: row.holiday_100_hours,
+    id: row.id,
+    nightHours: row.night_hours,
+    normalHours: row.normal_hours,
+    note: row.note,
+    overtime50Hours: row.overtime_50_hours,
+    overtime100Hours: row.overtime_100_hours,
+    special50Hours: row.special_50_hours,
+    startTime: row.start_time ?? "",
+    sundayHours: row.sunday_hours,
+  };
+}
+
 function getCurrentMonth() {
   return new Date().toISOString().slice(0, 7);
 }
@@ -166,6 +239,16 @@ const copy = {
     aboutLink: "Meist",
     privacyLink: "Privaatsus",
     termsLink: "Kasutustingimused",
+    accountLink: "Konto",
+    accountCtaTitle: "Salvesta oma andmed kontole",
+    accountCtaText:
+      "Loo konto, et palgaseaded ja tööpäevad oleksid turvalisemalt salvestatud ning hiljem lihtsamini kasutatavad.",
+    accountCtaButton: "Loo konto",
+    cloudSyncLocal: "Salvestus selles seadmes",
+    cloudSyncSyncing: "Sünkroonimine...",
+    cloudSyncSynced: "Kontoga sünkroonitud",
+    cloudSyncError:
+      "Kontoga sünkroonimine ei õnnestunud. Kontrolli Supabase tabeleid.",
     storageNoticeTitle: "Privaatsusseaded",
     storageNoticeText:
       "PalkkaPro saab kasutada brauseri salvestust, et mäletada sinu keelt, palgaseadeid ja kalendrisse lisatud tööpäevi. Kui keeldud, töötab kalkulaator edasi, aga andmeid ei salvestata.",
@@ -279,6 +362,16 @@ const copy = {
     aboutLink: "About",
     privacyLink: "Privacy",
     termsLink: "Terms",
+    accountLink: "Account",
+    accountCtaTitle: "Save your data to an account",
+    accountCtaText:
+      "Create an account to keep wage settings and workdays saved more safely and easier to use later.",
+    accountCtaButton: "Create account",
+    cloudSyncLocal: "Saved on this device",
+    cloudSyncSyncing: "Syncing...",
+    cloudSyncSynced: "Synced to account",
+    cloudSyncError:
+      "Account sync did not work. Check the Supabase tables.",
     storageNoticeTitle: "Privacy preferences",
     storageNoticeText:
       "PalkkaPro can use browser storage to remember your language, wage settings and saved calendar workdays. If you decline, the calculator still works, but your data is not saved.",
@@ -392,6 +485,16 @@ const copy = {
     aboutLink: "Tietoa",
     privacyLink: "Tietosuoja",
     termsLink: "Käyttöehdot",
+    accountLink: "Tili",
+    accountCtaTitle: "Tallenna tiedot tilille",
+    accountCtaText:
+      "Luo tili, jotta palkka-asetukset ja työpäivät säilyvät turvallisemmin ja ovat helpommin käytettävissä myöhemmin.",
+    accountCtaButton: "Luo tili",
+    cloudSyncLocal: "Tallennus tällä laitteella",
+    cloudSyncSyncing: "Synkronoidaan...",
+    cloudSyncSynced: "Synkronoitu tilille",
+    cloudSyncError:
+      "Tilin synkronointi ei onnistunut. Tarkista Supabase-taulut.",
     storageNoticeTitle: "Tietosuoja-asetukset",
     storageNoticeText:
       "PalkkaPro voi käyttää selaimen tallennustilaa muistaakseen kielen, palkka-asetukset ja kalenteriin tallennetut työpäivät. Jos kieltäydyt, laskuri toimii edelleen, mutta tietoja ei tallenneta.",
@@ -550,8 +653,24 @@ export default function Home() {
     useState<StorageConsent>("checking");
   const [activeView, setActiveView] = useState<AppView>("planner");
   const [reportMode, setReportMode] = useState<ReportMode>("daily");
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [cloudSyncStatus, setCloudSyncStatus] =
+    useState<CloudSyncStatus>("local");
+  const [hasLoadedCalculatorValuesState, setHasLoadedCalculatorValuesState] =
+    useState(false);
+  const [hasLoadedShiftsState, setHasLoadedShiftsState] = useState(false);
   const hasLoadedCalculatorValues = useRef(false);
   const hasLoadedShifts = useRef(false);
+  const hasLoadedCloudData = useRef(false);
+  const latestSettingsRef = useRef<SavedCalculatorSettings>({
+    hourlyWage,
+    otherDeductionsPercentage,
+    pensionPercentage,
+    taxPercentage,
+    unemploymentPercentage,
+  });
+  const latestWorkShiftsRef = useRef<WorkShift[]>(workShifts);
+  const supabase = useMemo(() => getSupabaseClient(), []);
 
   useEffect(() => {
     window.setTimeout(() => {
@@ -582,6 +701,17 @@ export default function Home() {
       window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
     }
   }, [language, storageConsent]);
+
+  useEffect(() => {
+    if (storageConsent === "declined") {
+      window.setTimeout(() => {
+        hasLoadedCalculatorValues.current = true;
+        hasLoadedShifts.current = true;
+        setHasLoadedCalculatorValuesState(true);
+        setHasLoadedShiftsState(true);
+      }, 0);
+    }
+  }, [storageConsent]);
 
   useEffect(() => {
     if (storageConsent !== "accepted") {
@@ -620,6 +750,7 @@ export default function Home() {
       }
 
       hasLoadedCalculatorValues.current = true;
+      setHasLoadedCalculatorValuesState(true);
     }, 0);
   }, [storageConsent]);
 
@@ -670,6 +801,7 @@ export default function Home() {
       }
 
       hasLoadedShifts.current = true;
+      setHasLoadedShiftsState(true);
     }, 0);
   }, [storageConsent]);
 
@@ -681,6 +813,243 @@ export default function Home() {
       );
     }
   }, [storageConsent, workShifts]);
+
+  useEffect(() => {
+    latestSettingsRef.current = {
+      hourlyWage,
+      otherDeductionsPercentage,
+      pensionPercentage,
+      taxPercentage,
+      unemploymentPercentage,
+    };
+  }, [
+    hourlyWage,
+    otherDeductionsPercentage,
+    pensionPercentage,
+    taxPercentage,
+    unemploymentPercentage,
+  ]);
+
+  useEffect(() => {
+    latestWorkShiftsRef.current = workShifts;
+  }, [workShifts]);
+
+  useEffect(() => {
+    if (!supabase) {
+      return;
+    }
+
+    let isActive = true;
+
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (isActive) {
+          setCurrentUser(data.user);
+          hasLoadedCloudData.current = false;
+          setCloudSyncStatus(data.user ? "syncing" : "local");
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setCurrentUser(null);
+          hasLoadedCloudData.current = false;
+          setCloudSyncStatus("local");
+        }
+      });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUser(session?.user ?? null);
+      hasLoadedCloudData.current = false;
+      setCloudSyncStatus(session?.user ? "syncing" : "local");
+    });
+
+    return () => {
+      isActive = false;
+      data.subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      hasLoadedCloudData.current = false;
+      return;
+    }
+
+    if (
+      !supabase ||
+      !hasLoadedCalculatorValuesState ||
+      !hasLoadedShiftsState
+    ) {
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadCloudData() {
+      if (!supabase || !currentUser) {
+        return;
+      }
+
+      setCloudSyncStatus("syncing");
+
+      const { data: paySettings, error: paySettingsError } = await supabase
+        .from("pay_settings")
+        .select(
+          "user_id, hourly_wage, tax_percentage, pension_percentage, unemployment_percentage, other_deductions_percentage",
+        )
+        .eq("user_id", currentUser.id)
+        .maybeSingle<CloudPaySettingsRow>();
+
+      if (!isActive) {
+        return;
+      }
+
+      if (paySettingsError) {
+        setCloudSyncStatus("error");
+        return;
+      }
+
+      if (paySettings) {
+        setHourlyWage(paySettings.hourly_wage);
+        setTaxPercentage(paySettings.tax_percentage);
+        setPensionPercentage(paySettings.pension_percentage);
+        setUnemploymentPercentage(paySettings.unemployment_percentage);
+        setOtherDeductionsPercentage(paySettings.other_deductions_percentage);
+      } else {
+        const settings = latestSettingsRef.current;
+
+        const { error: createSettingsError } = await supabase
+          .from("pay_settings")
+          .upsert({
+            hourly_wage: settings.hourlyWage,
+            other_deductions_percentage: settings.otherDeductionsPercentage,
+            pension_percentage: settings.pensionPercentage,
+            tax_percentage: settings.taxPercentage,
+            unemployment_percentage: settings.unemploymentPercentage,
+            user_id: currentUser.id,
+          });
+
+        if (createSettingsError) {
+          setCloudSyncStatus("error");
+          return;
+        }
+      }
+
+      const { data: cloudShifts, error: cloudShiftsError } = await supabase
+        .from("work_shifts")
+        .select(
+          "user_id, id, date, start_time, end_time, break_minutes, normal_hours, evening_hours, night_hours, sunday_hours, overtime_50_hours, overtime_100_hours, special_50_hours, holiday_100_hours, note",
+        )
+        .eq("user_id", currentUser.id)
+        .order("date", { ascending: true })
+        .returns<CloudWorkShiftRow[]>();
+
+      if (!isActive) {
+        return;
+      }
+
+      if (cloudShiftsError) {
+        setCloudSyncStatus("error");
+        return;
+      }
+
+      if (cloudShifts && cloudShifts.length > 0) {
+        setWorkShifts(cloudShifts.map(mapCloudRowToShift));
+      } else if (latestWorkShiftsRef.current.length > 0) {
+        const { error: createShiftsError } = await supabase
+          .from("work_shifts")
+          .upsert(
+            latestWorkShiftsRef.current.map((shift) =>
+              mapShiftToCloudRow(shift, currentUser.id),
+            ),
+          );
+
+        if (createShiftsError) {
+          setCloudSyncStatus("error");
+          return;
+        }
+      }
+
+      hasLoadedCloudData.current = true;
+      setCloudSyncStatus("synced");
+    }
+
+    void loadCloudData();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    currentUser,
+    hasLoadedCalculatorValuesState,
+    hasLoadedShiftsState,
+    supabase,
+  ]);
+
+  useEffect(() => {
+    if (!currentUser || !supabase || !hasLoadedCloudData.current) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const settings = latestSettingsRef.current;
+
+      setCloudSyncStatus("syncing");
+
+      supabase
+        .from("pay_settings")
+        .upsert({
+          hourly_wage: settings.hourlyWage,
+          other_deductions_percentage: settings.otherDeductionsPercentage,
+          pension_percentage: settings.pensionPercentage,
+          tax_percentage: settings.taxPercentage,
+          unemployment_percentage: settings.unemploymentPercentage,
+          user_id: currentUser.id,
+        })
+        .then(({ error }) => {
+          setCloudSyncStatus(error ? "error" : "synced");
+        });
+    }, 700);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    currentUser,
+    hourlyWage,
+    otherDeductionsPercentage,
+    pensionPercentage,
+    supabase,
+    taxPercentage,
+    unemploymentPercentage,
+  ]);
+
+  useEffect(() => {
+    if (!currentUser || !supabase || !hasLoadedCloudData.current) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const rows = latestWorkShiftsRef.current.map((shift) =>
+        mapShiftToCloudRow(shift, currentUser.id),
+      );
+
+      if (rows.length === 0) {
+        setCloudSyncStatus("synced");
+        return;
+      }
+
+      setCloudSyncStatus("syncing");
+
+      supabase
+        .from("work_shifts")
+        .upsert(rows)
+        .then(({ error }) => {
+          setCloudSyncStatus(error ? "error" : "synced");
+        });
+    }, 700);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [currentUser, supabase, workShifts]);
 
   useEffect(() => {
     const hasOpenModal =
@@ -1567,6 +1936,19 @@ export default function Home() {
 
   function removeShift(id: string) {
     setWorkShifts((current) => current.filter((shift) => shift.id !== id));
+
+    if (currentUser && supabase && hasLoadedCloudData.current) {
+      setCloudSyncStatus("syncing");
+
+      supabase
+        .from("work_shifts")
+        .delete()
+        .eq("user_id", currentUser.id)
+        .eq("id", id)
+        .then(({ error }) => {
+          setCloudSyncStatus(error ? "error" : "synced");
+        });
+    }
   }
 
   function changeLanguage(nextLanguage: Language) {
@@ -1603,6 +1985,20 @@ export default function Home() {
     setStorageConsent("declined");
   }
 
+  const cloudSyncText = currentUser
+    ? cloudSyncStatus === "syncing"
+      ? (t.cloudSyncSyncing as string)
+      : cloudSyncStatus === "error"
+        ? (t.cloudSyncError as string)
+        : (t.cloudSyncSynced as string)
+    : (t.cloudSyncLocal as string);
+  const cloudSyncClass =
+    currentUser && cloudSyncStatus === "error"
+      ? "border-red-200 bg-red-50 text-red-700"
+      : currentUser
+        ? "border-teal-200 bg-teal-50 text-teal-700"
+        : "border-slate-200 bg-slate-50 text-slate-500";
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <script
@@ -1612,6 +2008,14 @@ export default function Home() {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5 lg:gap-5 lg:px-8">
         <header className="relative rounded-lg border border-slate-200 bg-white p-4 pr-20 shadow-sm lg:p-5 lg:pr-24">
           <div className="absolute right-3 top-3 flex items-center gap-2 lg:right-4 lg:top-4">
+            <Link
+              href="/account"
+              className="grid size-8 place-items-center rounded-md border border-slate-200 bg-slate-50 text-slate-600 outline-none transition hover:border-teal-200 hover:bg-white hover:text-teal-700 focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+              aria-label={t.accountLink as string}
+              title={t.accountLink as string}
+            >
+              <UserRound size={15} aria-hidden="true" />
+            </Link>
             <label>
               <span className="sr-only">{t.languageLabel as string}</span>
               <select
@@ -1646,6 +2050,11 @@ export default function Home() {
                 </div>
                 <span className="rounded-md border border-teal-200 bg-teal-50 px-2 py-0.5 text-[11px] font-bold uppercase text-teal-700">
                   {t.betaLabel as string}
+                </span>
+                <span
+                  className={`rounded-md border px-2 py-0.5 text-[11px] font-bold ${cloudSyncClass}`}
+                >
+                  {cloudSyncText}
                 </span>
               </div>
               <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
@@ -1685,6 +2094,30 @@ export default function Home() {
             ))}
           </nav>
         </div>
+
+        {!currentUser ? (
+          <section className="flex flex-col gap-3 rounded-lg border border-teal-100 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-md border border-teal-100 bg-teal-50 text-teal-700">
+                <UserRound size={17} aria-hidden="true" />
+              </div>
+              <div>
+                <h2 className="text-sm font-black text-slate-950">
+                  {t.accountCtaTitle as string}
+                </h2>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
+                  {t.accountCtaText as string}
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/account?mode=signUp"
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-slate-950 px-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300"
+            >
+              {t.accountCtaButton as string}
+            </Link>
+          </section>
+        ) : null}
 
         {activeView === "calculator" ? (
         <section className="grid gap-4 lg:grid-cols-[minmax(0,1.06fr)_minmax(360px,0.94fr)] lg:gap-5">
@@ -2103,143 +2536,153 @@ export default function Home() {
         ) : null}
 
         {isShiftModalOpen ? (
-          <div className="fixed inset-0 z-50 flex items-end bg-slate-950/50 p-3 sm:items-center sm:justify-center">
+          <div className="fixed inset-0 z-50 flex items-stretch overflow-hidden bg-slate-950/50 sm:items-center sm:justify-center sm:p-3">
             <form
               onSubmit={saveShift}
-              className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl sm:p-5"
+              className="flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden bg-white shadow-xl sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-lg"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-bold uppercase text-teal-700">
-                    {t.premiumPreview as string}
-                  </p>
-                  <h2 className="mt-1 text-xl font-bold text-slate-950">
-                    {editingShiftId
-                      ? (t.edit as string)
-                      : (t.editWorkday as string)}
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {shiftDraft.date}
-                  </p>
+              <div className="shrink-0 border-b border-slate-200 bg-white p-4 pt-[calc(1rem+env(safe-area-inset-top))] sm:p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase text-teal-700">
+                      {t.premiumPreview as string}
+                    </p>
+                    <h2 className="mt-1 text-xl font-bold text-slate-950">
+                      {editingShiftId
+                        ? (t.edit as string)
+                        : (t.editWorkday as string)}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {shiftDraft.date}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingShiftId(null);
+                      setIsShiftModalOpen(false);
+                    }}
+                    className="h-9 rounded-md border border-slate-200 px-3 text-xs font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    {t.close as string}
+                  </button>
                 </div>
+              </div>
+
+              <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain p-4 sm:p-5">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <PlannerInput
+                    label={t.date as string}
+                    value={shiftDraft.date}
+                    onChange={(value) => updateShiftDraft("date", value)}
+                    type="date"
+                  />
+                  <PlannerInput
+                    label={t.breakMinutes as string}
+                    value={shiftDraft.breakMinutes ?? "0"}
+                    onChange={(value) =>
+                      updateShiftDraft("breakMinutes", value)
+                    }
+                    suffix="min"
+                  />
+                  <PlannerInput
+                    label={t.startTime as string}
+                    value={shiftDraft.startTime ?? ""}
+                    onChange={(value) => updateShiftDraft("startTime", value)}
+                    type="time"
+                  />
+                  <PlannerInput
+                    label={t.endTime as string}
+                    value={shiftDraft.endTime ?? ""}
+                    onChange={(value) => updateShiftDraft("endTime", value)}
+                    type="time"
+                  />
+                </div>
+
+                <section className="mt-4 rounded-lg border border-teal-100 bg-teal-50 p-3">
+                  <h3 className="text-sm font-bold text-teal-900">
+                    {t.autoCalculated as string}
+                  </h3>
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <MiniStat
+                      label={t.totalWorked as string}
+                      value={`${shiftDraftPreview.normalHours} h`}
+                    />
+                    <MiniStat
+                      label={t.eveningShort as string}
+                      value={`${shiftDraftPreview.eveningHours} h`}
+                    />
+                    <MiniStat
+                      label={t.nightShort as string}
+                      value={`${shiftDraftPreview.nightHours} h`}
+                    />
+                    <MiniStat
+                      label={t.sundayShort as string}
+                      value={`${shiftDraftPreview.sundayHours} h`}
+                    />
+                  </div>
+                </section>
+
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <PlannerInput
+                    label={fieldText.overtime50Hours[0]}
+                    value={shiftDraft.overtime50Hours}
+                    onChange={(value) =>
+                      updateShiftDraft("overtime50Hours", value)
+                    }
+                    suffix="h"
+                  />
+                  <PlannerInput
+                    label={fieldText.overtime100Hours[0]}
+                    value={shiftDraft.overtime100Hours}
+                    onChange={(value) =>
+                      updateShiftDraft("overtime100Hours", value)
+                    }
+                    suffix="h"
+                  />
+                  <PlannerInput
+                    label={fieldText.special50Hours[0]}
+                    value={shiftDraft.special50Hours}
+                    onChange={(value) =>
+                      updateShiftDraft("special50Hours", value)
+                    }
+                    suffix="h"
+                  />
+                  <PlannerInput
+                    label={fieldText.holiday100Hours[0]}
+                    value={shiftDraft.holiday100Hours}
+                    onChange={(value) =>
+                      updateShiftDraft("holiday100Hours", value)
+                    }
+                    suffix="h"
+                  />
+                  <div>
+                    <label className="block rounded-lg border border-slate-200 bg-white p-3 transition focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-100">
+                      <span className="text-xs font-bold text-slate-600">
+                        {t.note as string}
+                      </span>
+                      <textarea
+                        value={shiftDraft.note}
+                        onChange={(event) =>
+                          updateShiftDraft("note", event.target.value)
+                        }
+                        rows={2}
+                        className="mt-2 min-h-20 w-full resize-none rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold outline-none"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="shrink-0 border-t border-slate-200 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-5">
                 <button
-                  type="button"
-                  onClick={() => {
-                    setEditingShiftId(null);
-                    setIsShiftModalOpen(false);
-                  }}
-                  className="h-9 rounded-md border border-slate-200 px-3 text-xs font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                  type="submit"
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-slate-800 sm:h-10 sm:w-auto"
                 >
-                  {t.close as string}
+                  <Plus size={16} />
+                  {t.saveWorkday as string}
                 </button>
               </div>
-
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <PlannerInput
-                  label={t.date as string}
-                  value={shiftDraft.date}
-                  onChange={(value) => updateShiftDraft("date", value)}
-                  type="date"
-                />
-                <PlannerInput
-                  label={t.breakMinutes as string}
-                  value={shiftDraft.breakMinutes ?? "0"}
-                  onChange={(value) => updateShiftDraft("breakMinutes", value)}
-                  suffix="min"
-                />
-                <PlannerInput
-                  label={t.startTime as string}
-                  value={shiftDraft.startTime ?? ""}
-                  onChange={(value) => updateShiftDraft("startTime", value)}
-                  type="time"
-                />
-                <PlannerInput
-                  label={t.endTime as string}
-                  value={shiftDraft.endTime ?? ""}
-                  onChange={(value) => updateShiftDraft("endTime", value)}
-                  type="time"
-                />
-              </div>
-
-              <section className="mt-4 rounded-lg border border-teal-100 bg-teal-50 p-3">
-                <h3 className="text-sm font-bold text-teal-900">
-                  {t.autoCalculated as string}
-                </h3>
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <MiniStat
-                    label={t.totalWorked as string}
-                    value={`${shiftDraftPreview.normalHours} h`}
-                  />
-                  <MiniStat
-                    label={t.eveningShort as string}
-                    value={`${shiftDraftPreview.eveningHours} h`}
-                  />
-                  <MiniStat
-                    label={t.nightShort as string}
-                    value={`${shiftDraftPreview.nightHours} h`}
-                  />
-                  <MiniStat
-                    label={t.sundayShort as string}
-                    value={`${shiftDraftPreview.sundayHours} h`}
-                  />
-                </div>
-              </section>
-
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <PlannerInput
-                  label={fieldText.overtime50Hours[0]}
-                  value={shiftDraft.overtime50Hours}
-                  onChange={(value) =>
-                    updateShiftDraft("overtime50Hours", value)
-                  }
-                  suffix="h"
-                />
-                <PlannerInput
-                  label={fieldText.overtime100Hours[0]}
-                  value={shiftDraft.overtime100Hours}
-                  onChange={(value) =>
-                    updateShiftDraft("overtime100Hours", value)
-                  }
-                  suffix="h"
-                />
-                <PlannerInput
-                  label={fieldText.special50Hours[0]}
-                  value={shiftDraft.special50Hours}
-                  onChange={(value) => updateShiftDraft("special50Hours", value)}
-                  suffix="h"
-                />
-                <PlannerInput
-                  label={fieldText.holiday100Hours[0]}
-                  value={shiftDraft.holiday100Hours}
-                  onChange={(value) =>
-                    updateShiftDraft("holiday100Hours", value)
-                  }
-                  suffix="h"
-                />
-                <div>
-                  <label className="block rounded-lg border border-slate-200 bg-white p-3 transition focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-100">
-                    <span className="text-xs font-bold text-slate-600">
-                      {t.note as string}
-                    </span>
-                    <textarea
-                      value={shiftDraft.note}
-                      onChange={(event) =>
-                        updateShiftDraft("note", event.target.value)
-                      }
-                      rows={2}
-                      className="mt-2 min-h-20 w-full resize-none rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold outline-none"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-slate-800 sm:w-auto"
-              >
-                <Plus size={16} />
-                {t.saveWorkday as string}
-              </button>
             </form>
           </div>
         ) : null}
@@ -2507,6 +2950,12 @@ export default function Home() {
               className="inline-flex h-9 items-center justify-center rounded-md px-3 text-xs font-bold text-slate-500 transition hover:bg-slate-50 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-100"
             >
               {t.termsLink as string}
+            </Link>
+            <Link
+              href="/account"
+              className="inline-flex h-9 items-center justify-center rounded-md px-3 text-xs font-bold text-slate-500 transition hover:bg-slate-50 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-100"
+            >
+              {t.accountLink as string}
             </Link>
             <a
               href={feedbackHref}

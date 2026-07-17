@@ -91,7 +91,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fi">
-      <body>
+      <body suppressHydrationWarning>
         {children}
         <Analytics />
       </body>
