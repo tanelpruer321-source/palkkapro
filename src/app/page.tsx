@@ -2536,10 +2536,10 @@ export default function Home() {
         ) : null}
 
         {isShiftModalOpen ? (
-          <div className="fixed inset-0 z-50 flex items-stretch overflow-hidden bg-slate-950/50 sm:items-center sm:justify-center sm:p-3">
+          <div className="fixed inset-0 z-50 flex touch-pan-y items-stretch overflow-hidden overscroll-contain bg-slate-950/50 sm:items-center sm:justify-center sm:p-3">
             <form
               onSubmit={saveShift}
-              className="flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden bg-white shadow-xl sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-lg"
+              className="flex h-[100svh] max-h-[100svh] w-full flex-col overflow-hidden bg-white shadow-xl sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-lg"
             >
               <div className="shrink-0 border-b border-slate-200 bg-white p-4 pt-[calc(1rem+env(safe-area-inset-top))] sm:p-5">
                 <div className="flex items-start justify-between gap-4">
@@ -2688,9 +2688,10 @@ export default function Home() {
         ) : null}
 
         {isAllShiftsModalOpen ? (
-          <div className="fixed inset-0 z-50 flex items-end bg-slate-950/50 p-3 sm:items-center sm:justify-center">
-            <section className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl sm:p-5">
-              <div className="flex items-start justify-between gap-4">
+          <div className="fixed inset-0 z-50 flex touch-pan-y items-stretch overflow-hidden overscroll-contain bg-slate-950/50 sm:items-center sm:justify-center sm:p-3">
+            <section className="flex h-[100svh] max-h-[100svh] w-full flex-col overflow-hidden bg-white shadow-xl sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-lg">
+              <div className="shrink-0 border-b border-slate-200 bg-white p-4 pt-[calc(1rem+env(safe-area-inset-top))] sm:p-5">
+                <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-bold text-slate-950">
                     {t.allWorkdays as string}
@@ -2706,9 +2707,10 @@ export default function Home() {
                 >
                   {t.close as string}
                 </button>
+                </div>
               </div>
 
-              <div className="mt-4 space-y-2">
+              <div className="min-h-0 flex-1 touch-pan-y space-y-2 overflow-y-auto overscroll-contain p-4 sm:p-5">
                 {filteredShifts.length === 0 ? (
                   <p className="text-sm text-slate-500">
                     {t.noWorkdays as string}
@@ -2734,30 +2736,33 @@ export default function Home() {
         ) : null}
 
         {isReportModalOpen ? (
-          <div className="fixed inset-0 z-50 flex items-end bg-slate-950/50 p-3 sm:items-center sm:justify-center">
-            <section className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl sm:p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-bold uppercase text-teal-700">
-                    {t.premiumPreview as string}
-                  </p>
-                  <h2 className="mt-1 text-xl font-bold text-slate-950">
-                    {t.reportTitle as string}
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {selectedMonth}
-                  </p>
+          <div className="fixed inset-0 z-50 flex touch-pan-y items-stretch overflow-hidden overscroll-contain bg-slate-950/50 sm:items-center sm:justify-center sm:p-3">
+            <section className="flex h-[100svh] max-h-[100svh] w-full flex-col overflow-hidden bg-white shadow-xl sm:h-auto sm:max-h-[92vh] sm:max-w-3xl sm:rounded-lg">
+              <div className="shrink-0 border-b border-slate-200 bg-white p-4 pt-[calc(1rem+env(safe-area-inset-top))] sm:p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase text-teal-700">
+                      {t.premiumPreview as string}
+                    </p>
+                    <h2 className="mt-1 text-xl font-bold text-slate-950">
+                      {t.reportTitle as string}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {selectedMonth}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsReportModalOpen(false)}
+                    className="h-9 shrink-0 rounded-md border border-slate-200 px-3 text-xs font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    {t.close as string}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsReportModalOpen(false)}
-                  className="h-9 shrink-0 rounded-md border border-slate-200 px-3 text-xs font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
-                >
-                  {t.close as string}
-                </button>
               </div>
 
-              <section className="mt-4 rounded-lg border border-slate-200 bg-slate-950 p-4 text-white">
+              <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain p-4 sm:p-5">
+              <section className="rounded-lg border border-slate-200 bg-slate-950 p-4 text-white">
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-sm font-bold">
                     {t.reportSummary as string}
@@ -2903,7 +2908,10 @@ export default function Home() {
                 )}
               </div>
 
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              </div>
+
+              <div className="shrink-0 border-t border-slate-200 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={downloadReportPdf}
@@ -2920,6 +2928,7 @@ export default function Home() {
                   <Download size={16} />
                   {t.downloadReport as string}
                 </button>
+              </div>
               </div>
             </section>
           </div>

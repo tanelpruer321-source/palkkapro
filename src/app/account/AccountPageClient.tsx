@@ -338,11 +338,11 @@ export default function AccountPageClient({
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
+      <div className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col px-4 py-3 sm:px-6 sm:py-5 lg:px-8">
         <header className="flex items-center justify-between">
           <Link
             href="/"
-            className="grid size-10 place-items-center rounded-md border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-teal-300 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-100"
+            className="grid size-9 place-items-center rounded-md border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-teal-300 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-100 sm:size-10"
             aria-label={t.backHome as string}
             title={t.backHome as string}
           >
@@ -369,7 +369,7 @@ export default function AccountPageClient({
         </header>
 
         <section
-          className={`grid flex-1 items-center gap-6 py-8 lg:py-10 ${
+          className={`grid flex-1 items-start gap-4 py-4 sm:items-center sm:gap-6 sm:py-8 lg:py-10 ${
             user ? "lg:grid-cols-1" : "lg:grid-cols-[minmax(0,1fr)_430px]"
           }`}
         >
@@ -422,26 +422,26 @@ export default function AccountPageClient({
           ) : null}
 
           <div className="mx-auto w-full max-w-md">
-            <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-7">
               <div className="flex flex-col items-center text-center">
                 <Image
                   src="/palkkapro-mark.svg"
                   alt=""
                   width={64}
                   height={64}
-                  className="size-16 rounded-lg shadow-sm"
+                  className="size-12 rounded-lg shadow-sm sm:size-16"
                   aria-hidden="true"
                 />
-                <h1 className="mt-5 text-3xl font-black tracking-normal text-slate-950 sm:text-4xl">
+                <h1 className="mt-3 text-2xl font-black tracking-normal text-slate-950 sm:mt-5 sm:text-4xl">
                   {authTitle}
                 </h1>
-                <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
+                <p className="mt-1.5 max-w-sm text-sm leading-5 text-slate-500 sm:mt-2 sm:leading-6">
                   {authDescription}
                 </p>
               </div>
 
               {!user ? (
-                <div className="mt-7 grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-50 p-1">
+                <div className="mt-5 grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-50 p-1 sm:mt-7">
                   {(["signIn", "signUp"] as AuthMode[]).map((authMode) => (
                     <button
                       key={authMode}
@@ -502,12 +502,12 @@ export default function AccountPageClient({
                   </button>
                 </div>
               ) : (
-                <form onSubmit={submitAuth} className="mt-5 space-y-4">
+                <form onSubmit={submitAuth} className="mt-4 space-y-3 sm:mt-5 sm:space-y-4">
                   <label className="block">
                     <span className="text-xs font-bold text-slate-600">
                       {t.email as string}
                     </span>
-                    <span className="mt-2 flex h-12 items-center rounded-md border border-slate-200 bg-slate-50 px-3 transition focus-within:border-teal-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-teal-100">
+                    <span className="mt-1.5 flex h-11 items-center rounded-md border border-slate-200 bg-slate-50 px-3 transition focus-within:border-teal-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-teal-100 sm:mt-2 sm:h-12">
                       <Mail
                         size={18}
                         className="mr-3 shrink-0 text-slate-400"
@@ -528,7 +528,7 @@ export default function AccountPageClient({
                     <span className="text-xs font-bold text-slate-600">
                       {t.password as string}
                     </span>
-                    <span className="mt-2 flex h-12 items-center rounded-md border border-slate-200 bg-slate-50 px-3 transition focus-within:border-teal-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-teal-100">
+                    <span className="mt-1.5 flex h-11 items-center rounded-md border border-slate-200 bg-slate-50 px-3 transition focus-within:border-teal-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-teal-100 sm:mt-2 sm:h-12">
                       <KeyRound
                         size={18}
                         className="mr-3 shrink-0 text-slate-400"
@@ -569,13 +569,13 @@ export default function AccountPageClient({
                         )}
                       </button>
                     </span>
-                    <span className="mt-2 block text-xs font-semibold text-slate-500">
+                    <span className="mt-1.5 block text-xs font-semibold text-slate-500 sm:mt-2">
                       {t.passwordHelp as string}
                     </span>
                   </label>
 
                   {mode === "signUp" ? (
-                    <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-700">
+                    <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm font-semibold leading-5 text-slate-700 sm:p-3">
                       <input
                         type="checkbox"
                         checked={acceptTerms}
@@ -600,7 +600,7 @@ export default function AccountPageClient({
                   <button
                     type="submit"
                     disabled={!canSubmit}
-                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-black text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-black text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 sm:h-12"
                   >
                     <Lock size={16} aria-hidden="true" />
                     {isLoading
@@ -626,7 +626,7 @@ export default function AccountPageClient({
               ) : null}
             </section>
 
-            <p className="mt-4 rounded-lg border border-slate-200 bg-white p-3 text-center text-xs font-semibold leading-5 text-slate-500 shadow-sm lg:hidden">
+            <p className="mt-3 rounded-lg border border-slate-200 bg-white p-2.5 text-center text-xs font-semibold leading-5 text-slate-500 shadow-sm sm:mt-4 sm:p-3 lg:hidden">
               {t.privacyNote as string}
             </p>
           </div>
