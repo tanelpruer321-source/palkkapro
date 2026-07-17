@@ -2688,8 +2688,8 @@ export default function Home() {
         ) : null}
 
         {isAllShiftsModalOpen ? (
-          <div className="fixed inset-0 z-50 flex touch-pan-y items-stretch overflow-hidden overscroll-contain bg-slate-950/50 sm:items-center sm:justify-center sm:p-3">
-            <section className="flex h-[100svh] max-h-[100svh] w-full flex-col overflow-hidden bg-white shadow-xl sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-lg">
+          <div className="fixed inset-0 z-50 flex touch-pan-y items-stretch overflow-hidden overscroll-contain bg-slate-950/50">
+            <section className="flex h-[100dvh] max-h-[100dvh] w-[100dvw] max-w-none flex-col overflow-hidden rounded-none bg-white shadow-xl">
               <div className="shrink-0 border-b border-slate-200 bg-white p-4 pt-[calc(1rem+env(safe-area-inset-top))] sm:p-5">
                 <div className="flex items-start justify-between gap-4">
                 <div>
