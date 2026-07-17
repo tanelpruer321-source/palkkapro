@@ -338,8 +338,8 @@ export default function AccountPageClient({
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
-      <div className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col px-4 py-3 sm:px-6 sm:py-5 lg:px-8">
-        <header className="flex items-center justify-between">
+      <div className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col px-0 py-3 sm:px-6 sm:py-5 lg:px-8">
+        <header className="flex items-center justify-between px-4 sm:px-0">
           <Link
             href="/"
             className="grid size-9 place-items-center rounded-md border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-teal-300 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-100 sm:size-10"
@@ -369,7 +369,7 @@ export default function AccountPageClient({
         </header>
 
         <section
-          className={`grid flex-1 items-start gap-4 py-4 sm:items-center sm:gap-6 sm:py-8 lg:py-10 ${
+          className={`grid flex-1 items-start justify-items-center gap-4 px-4 py-4 sm:items-center sm:gap-6 sm:px-0 sm:py-8 lg:py-10 ${
             user ? "lg:grid-cols-1" : "lg:grid-cols-[minmax(0,1fr)_430px]"
           }`}
         >
@@ -421,7 +421,7 @@ export default function AccountPageClient({
             </aside>
           ) : null}
 
-          <div className="mx-auto w-full max-w-md">
+          <div className="w-[calc(100dvw-2rem)] max-w-md justify-self-center sm:w-full">
             <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-7">
               <div className="flex flex-col items-center text-center">
                 <Image

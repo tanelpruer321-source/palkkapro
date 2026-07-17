@@ -2737,7 +2737,7 @@ export default function Home() {
 
         {isReportModalOpen ? (
           <div className="fixed inset-0 z-50 flex touch-pan-y items-stretch overflow-hidden overscroll-contain bg-slate-950/50 sm:items-center sm:justify-center sm:p-3">
-            <section className="flex h-[100svh] max-h-[100svh] w-full flex-col overflow-hidden bg-white shadow-xl sm:h-auto sm:max-h-[92vh] sm:max-w-3xl sm:rounded-lg">
+            <section className="flex h-[100svh] max-h-[100svh] w-screen max-w-none flex-col overflow-hidden rounded-none bg-white shadow-xl sm:h-auto sm:max-h-[92vh] sm:w-full sm:max-w-3xl sm:rounded-lg">
               <div className="shrink-0 border-b border-slate-200 bg-white p-4 pt-[calc(1rem+env(safe-area-inset-top))] sm:p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -2762,79 +2762,80 @@ export default function Home() {
               </div>
 
               <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain p-4 sm:p-5">
-              <section className="rounded-lg border border-slate-200 bg-slate-950 p-4 text-white">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-bold">
-                    {t.reportSummary as string}
-                  </h3>
-                  <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-300 ring-1 ring-white/10">
-                    {selectedMonth}
-                  </span>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <MiniStat
-                    label={t.workdays as string}
-                    value={filteredShifts.length.toString()}
-                    tone="dark"
-                  />
-                  <MiniStat
-                    label={t.hoursBadge as string}
-                    value={`${shiftTotals.totalHours} h`}
-                    tone="dark"
-                  />
-                  <MiniStat
-                    label={t.grossPayShort as string}
-                    value={money.format(shiftTotals.grossPay)}
-                    tone="dark"
-                  />
-                  <MiniStat
-                    label={t.netPayShort as string}
-                    value={money.format(shiftTotals.estimatedNetPay)}
-                    tone="dark"
-                    highlight
-                  />
-                </div>
-              </section>
+                <section className="rounded-lg border border-slate-200 bg-slate-950 p-4 text-white">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-bold">
+                      {t.reportSummary as string}
+                    </h3>
+                    <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-300 ring-1 ring-white/10">
+                      {selectedMonth}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <MiniStat
+                      label={t.workdays as string}
+                      value={filteredShifts.length.toString()}
+                      tone="dark"
+                    />
+                    <MiniStat
+                      label={t.hoursBadge as string}
+                      value={`${shiftTotals.totalHours} h`}
+                      tone="dark"
+                    />
+                    <MiniStat
+                      label={t.grossPayShort as string}
+                      value={money.format(shiftTotals.grossPay)}
+                      tone="dark"
+                    />
+                    <MiniStat
+                      label={t.netPayShort as string}
+                      value={money.format(shiftTotals.estimatedNetPay)}
+                      tone="dark"
+                      highlight
+                    />
+                  </div>
+                </section>
 
-              <section className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <h3 className="text-sm font-bold text-slate-700">
-                  {t.bonusSummary as string}
-                </h3>
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  <ReportMiniStat
-                    label={t.eveningBonus as string}
-                    hours={shiftTotals.eveningHours}
-                    value={money.format(shiftTotals.eveningBonusTotal)}
-                  />
-                  <ReportMiniStat
-                    label={t.nightBonus as string}
-                    hours={shiftTotals.nightHours}
-                    value={money.format(shiftTotals.nightBonusTotal)}
-                  />
-                  <ReportMiniStat
-                    label={t.sundayBonus as string}
-                    hours={shiftTotals.sundayHours}
-                    value={money.format(shiftTotals.sundayBonus)}
-                  />
-                  <ReportMiniStat
-                    label={t.specialBonus as string}
-                    hours={shiftTotals.special50Hours}
-                    value={money.format(shiftTotals.specialBonus50)}
-                  />
-                  <ReportMiniStat
-                    label={t.holidayBonus as string}
-                    hours={shiftTotals.holiday100Hours}
-                    value={money.format(shiftTotals.holidayBonus100)}
-                  />
-                  <ReportMiniStat
-                    label={t.overtimePay as string}
-                    hours={
-                      shiftTotals.overtime50Hours + shiftTotals.overtime100Hours
-                    }
-                    value={money.format(shiftTotals.overtimePay)}
-                  />
-                </div>
-              </section>
+                <section className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <h3 className="text-sm font-bold text-slate-700">
+                    {t.bonusSummary as string}
+                  </h3>
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <ReportMiniStat
+                      label={t.eveningBonus as string}
+                      hours={shiftTotals.eveningHours}
+                      value={money.format(shiftTotals.eveningBonusTotal)}
+                    />
+                    <ReportMiniStat
+                      label={t.nightBonus as string}
+                      hours={shiftTotals.nightHours}
+                      value={money.format(shiftTotals.nightBonusTotal)}
+                    />
+                    <ReportMiniStat
+                      label={t.sundayBonus as string}
+                      hours={shiftTotals.sundayHours}
+                      value={money.format(shiftTotals.sundayBonus)}
+                    />
+                    <ReportMiniStat
+                      label={t.specialBonus as string}
+                      hours={shiftTotals.special50Hours}
+                      value={money.format(shiftTotals.specialBonus50)}
+                    />
+                    <ReportMiniStat
+                      label={t.holidayBonus as string}
+                      hours={shiftTotals.holiday100Hours}
+                      value={money.format(shiftTotals.holidayBonus100)}
+                    />
+                    <ReportMiniStat
+                      label={t.overtimePay as string}
+                      hours={
+                        shiftTotals.overtime50Hours +
+                        shiftTotals.overtime100Hours
+                      }
+                      value={money.format(shiftTotals.overtimePay)}
+                    />
+                  </div>
+                </section>
 
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-sm font-bold text-slate-700">
@@ -2911,7 +2912,7 @@ export default function Home() {
               </div>
 
               <div className="shrink-0 border-t border-slate-200 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-5">
-              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={downloadReportPdf}
@@ -2928,7 +2929,7 @@ export default function Home() {
                   <Download size={16} />
                   {t.downloadReport as string}
                 </button>
-              </div>
+                </div>
               </div>
             </section>
           </div>
